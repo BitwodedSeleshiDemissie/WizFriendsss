@@ -20,9 +20,37 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    if (loading) return;
+
+    // Ensure the middleware can recognise authenticated users
+    const syncAuthCookie = async () => {
+      if (!user) {
+        if (typeof document !== "undefined") {
+          document.cookie = "authToken=; path=/; max-age=0";
+        }
+        return;
+      }
+
+      try {
+        const token = await user.getIdToken();
+        if (typeof document !== "undefined") {
+          document.cookie = `authToken=${token}; path=/; max-age=3600; sameSite=lax`;
+        }
+      } catch (error) {
+        console.error("Failed to sync auth cookie", error);
+      }
+    };
+
+    syncAuthCookie();
+  }, [user, loading]);
+
   const logout = async () => {
     await signOut(auth);
     setUser(null);
+    if (typeof document !== "undefined") {
+      document.cookie = "authToken=; path=/; max-age=0";
+    }
   };
 
   return (
