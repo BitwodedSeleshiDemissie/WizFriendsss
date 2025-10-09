@@ -14,12 +14,19 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/discover";
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
-  // ✅ if already logged in, redirect immediately
+  // ✅ If already logged in, redirect immediately
   useEffect(() => {
-    if (user) router.replace(redirect);
-  }, [user, router, redirect]);
+    if (!authLoading && user) {
+      router.replace(redirect);
+    }
+  }, [authLoading, user, router, redirect]);
+
+  // ⏳ Prevent flicker while checking auth
+  if (authLoading || user) {
+    return null;
+  }
 
   const handleGoogleLogin = async () => {
     setLoading(true);
@@ -45,65 +52,61 @@ export default function LoginPage() {
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
-        className="relative z-10 bg-white/80 backdrop-blur-lg rounded-3xl shadow-2xl p-10 w-full max-w-md"
+        transition={{ duration: 0.6 }}
+        className="relative bg-white/80 backdrop-blur-xl shadow-xl rounded-3xl p-10 max-w-md w-full text-center border border-white/40"
       >
-        <h1 className="text-3xl font-extrabold text-transparent bg-gradient-to-r from-indigo-600 to-pink-500 bg-clip-text text-center">
-          Welcome Back
+        <Image
+          src="/logo.svg"
+          alt="Logo"
+          width={60}
+          height={60}
+          className="mx-auto mb-6"
+        />
+        <h1 className="text-3xl font-bold text-gray-800 mb-2">
+          Welcome to Commune
         </h1>
-        <p className="text-center text-gray-500 mt-2 mb-8">
-          Log in to continue your journey
+        <p className="text-gray-500 mb-8">
+          Connect with like-minded people and join inspiring communities.
         </p>
 
-        {/* Dummy form (non-functional for now) */}
-        <form className="space-y-5">
-          <input
-            type="email"
-            placeholder="Email address"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-800 placeholder-gray-400 shadow-sm"
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-gray-800 placeholder-gray-400 shadow-sm"
-          />
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.98 }}
-            type="submit"
-            className="w-full py-3 rounded-xl font-semibold text-white bg-gradient-to-r from-indigo-600 to-pink-500 shadow-lg hover:shadow-xl transition-all"
-          >
-            Log In
-          </motion.button>
-        </form>
-
-        {/* Divider */}
-        <div className="flex items-center my-6">
-          <div className="flex-grow h-px bg-gray-200"></div>
-          <span className="px-4 text-sm text-gray-400">or</span>
-          <div className="flex-grow h-px bg-gray-200"></div>
-        </div>
-
-        {/* Google Login */}
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          onClick={handleGoogleLogin}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.97 }}
           disabled={loading}
-          className="w-full py-3 rounded-xl border border-gray-300 bg-white shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-3 text-gray-600 font-medium"
+          onClick={handleGoogleLogin}
+          className="w-full bg-gradient-to-r from-indigo-600 to-pink-500 text-white px-6 py-3 rounded-full font-semibold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-3"
         >
-          <Image src="/google-icon.svg" alt="Google" width={20} height={20} />
-          {loading ? "Connecting..." : "Continue with Google"}
+          {loading ? (
+            <span className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></span>
+          ) : (
+            <>
+              <Image
+                src="/google-icon.svg"
+                alt="Google Icon"
+                width={20}
+                height={20}
+              />
+              Continue with Google
+            </>
+          )}
         </motion.button>
 
-        <p className="text-center text-gray-500 mt-8">
-          Don’t have an account?{" "}
+        <p className="text-sm text-gray-500 mt-6">
+          By continuing, you agree to our{" "}
           <Link
-            href="/auth/signup"
-            className="font-semibold text-indigo-600 hover:text-pink-500 transition"
+            href="/terms"
+            className="text-indigo-600 hover:text-indigo-800 font-medium"
           >
-            Sign up
+            Terms
+          </Link>{" "}
+          and{" "}
+          <Link
+            href="/privacy"
+            className="text-indigo-600 hover:text-indigo-800 font-medium"
+          >
+            Privacy Policy
           </Link>
+          .
         </p>
       </motion.div>
     </main>
