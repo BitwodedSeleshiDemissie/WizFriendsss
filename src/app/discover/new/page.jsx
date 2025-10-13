@@ -3,9 +3,13 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { useAuth } from "../../../context/AuthContext";
+
+const STORAGE_KEY_POTENTIAL = "homeconnect_potential_events";
 
 export default function NewActivityPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const [form, setForm] = useState({
     title: "",
     category: "",
@@ -19,9 +23,44 @@ export default function NewActivityPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Submitting:", form);
-    // Later: save to Firestore as { status: "pending", vouchedBy: [] }
-    router.push("/discover");
+    const trimmedForm = {
+      title: form.title.trim(),
+      category: form.category.trim(),
+      description: form.description.trim(),
+      image: form.image.trim(),
+    };
+
+    if (!trimmedForm.title || !trimmedForm.category || !trimmedForm.description) {
+      return;
+    }
+
+    const newProposal = {
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+      ...trimmedForm,
+      endorsements: [],
+      createdAt: new Date().toISOString(),
+      createdBy: user ? user.uid : "anonymous",
+      status: "potential",
+    };
+
+    try {
+      const existing = (() => {
+        if (typeof window === "undefined") return [];
+        const raw = window.localStorage.getItem(STORAGE_KEY_POTENTIAL);
+        return raw ? JSON.parse(raw) : [];
+      })();
+
+      const updated = [...existing, newProposal];
+
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem(STORAGE_KEY_POTENTIAL, JSON.stringify(updated));
+      }
+
+      router.push("/discover?tab=potential");
+    } catch (error) {
+      console.error("Failed to save activity proposal", error);
+      router.push("/discover?tab=potential");
+    }
   };
 
   return (
