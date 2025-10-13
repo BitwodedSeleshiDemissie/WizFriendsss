@@ -379,12 +379,16 @@ export function AppDataProvider({ children }) {
           createdAt: serverTimestamp(),
         });
 
-        await updateDoc(doc(db, "profiles", userId), {
-          joinedActivities: arrayUnion(activityRef.id),
-          savedActivities: arrayUnion(activityRef.id),
-          favourites: arrayUnion(activityRef.id),
-          updatedAt: serverTimestamp(),
-        });
+        await setDoc(
+          doc(db, "profiles", userId),
+          {
+            joinedActivities: arrayUnion(activityRef.id),
+            savedActivities: arrayUnion(activityRef.id),
+            favourites: arrayUnion(activityRef.id),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
 
         await appendNotification("Activity published", `${trimmedTitle} is now visible to the community.`);
         return activityRef.id;
@@ -410,10 +414,14 @@ export function AppDataProvider({ children }) {
           attendees: increment(1),
         });
 
-        await updateDoc(doc(db, "profiles", userId), {
-          joinedActivities: arrayUnion(activityId),
-          updatedAt: serverTimestamp(),
-        });
+        await setDoc(
+          doc(db, "profiles", userId),
+          {
+            joinedActivities: arrayUnion(activityId),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
 
         await appendNotification("Activity joined", `You're confirmed for ${data.title}. See you there!`);
       } finally {
@@ -429,11 +437,15 @@ export function AppDataProvider({ children }) {
       const isSaved = savedActivities.includes(activityId);
       setIsMutating(true);
       try {
-        await updateDoc(doc(db, "profiles", userId), {
-          savedActivities: isSaved ? arrayRemove(activityId) : arrayUnion(activityId),
-          favourites: isSaved ? arrayRemove(activityId) : arrayUnion(activityId),
-          updatedAt: serverTimestamp(),
-        });
+        await setDoc(
+          doc(db, "profiles", userId),
+          {
+            savedActivities: isSaved ? arrayRemove(activityId) : arrayUnion(activityId),
+            favourites: isSaved ? arrayRemove(activityId) : arrayUnion(activityId),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
       } finally {
         setIsMutating(false);
       }
@@ -466,10 +478,14 @@ export function AppDataProvider({ children }) {
 
       await appendNotification("Idea approved", `${idea.title} is now live in Activities.`);
 
-      await updateDoc(doc(db, "profiles", userId), {
-        joinedActivities: arrayUnion(newActivityRef.id),
-        updatedAt: serverTimestamp(),
-      });
+      await setDoc(
+        doc(db, "profiles", userId),
+        {
+          joinedActivities: arrayUnion(newActivityRef.id),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
     },
     [appendNotification, userId, userProfile.currentCity]
   );
@@ -586,10 +602,14 @@ export function AppDataProvider({ children }) {
           createdAt: serverTimestamp(),
         });
 
-        await updateDoc(doc(db, "profiles", userId), {
-          joinedGroups: arrayUnion(groupRef.id),
-          updatedAt: serverTimestamp(),
-        });
+        await setDoc(
+          doc(db, "profiles", userId),
+          {
+            joinedGroups: arrayUnion(groupRef.id),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
 
         await appendNotification("Group created", `${trimmedName} is ready. Invite members to join.`);
         return groupRef.id;
@@ -611,9 +631,47 @@ export function AppDataProvider({ children }) {
           membersCount: increment(1),
           memberIds: arrayUnion(userId),
         });
-        await updateDoc(doc(db, "profiles", userId), {
-          joinedGroups: arrayUnion(groupId),
-          updatedAt: serverTimestamp(),
+        await setDoc(
+          doc(db, "profiles", userId),
+          {
+            joinedGroups: arrayUnion(groupId),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        setGroups((previous) =>
+          previous.map((group) => {
+            if (group.id !== groupId) return group;
+            const memberIds = Array.isArray(group.memberIds) ? group.memberIds : [];
+            const alreadyMember = memberIds.includes(userId);
+            const nextMemberIds = alreadyMember ? memberIds : [...memberIds, userId];
+            const nextMembersCount = Math.max(
+              (group.membersCount ?? memberIds.length) + (alreadyMember ? 0 : 1),
+              nextMemberIds.length
+            );
+            return {
+              ...group,
+              membersCount: nextMembersCount,
+              memberIds: nextMemberIds,
+            };
+          })
+        );
+
+        setProfileDoc((previous) => {
+          const base = previous ?? {};
+          const existing = Array.isArray(base.joinedGroups) ? base.joinedGroups : [];
+          if (existing.includes(groupId)) return base;
+          const next = {
+            ...base,
+            id: userId,
+            joinedGroups: [...existing, groupId],
+          };
+          if (userId) {
+            const cached = profilesCacheRef.current.get(userId) ?? {};
+            profilesCacheRef.current.set(userId, { ...cached, ...next, id: userId });
+          }
+          return next;
         });
 
         const snapshot = await getDoc(groupRef);
@@ -625,7 +683,7 @@ export function AppDataProvider({ children }) {
         setIsMutating(false);
       }
     },
-    [appendNotification, joinedGroups, userId]
+    [appendNotification, joinedGroups, setGroups, setProfileDoc, userId]
   );
 
   const leaveGroup = useCallback(
@@ -641,15 +699,56 @@ export function AppDataProvider({ children }) {
           adminIds: arrayRemove(userId),
         });
 
-        await updateDoc(doc(db, "profiles", userId), {
-          joinedGroups: arrayRemove(groupId),
-          updatedAt: serverTimestamp(),
+        await setDoc(
+          doc(db, "profiles", userId),
+          {
+            joinedGroups: arrayRemove(groupId),
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        setGroups((previous) =>
+          previous.map((group) => {
+            if (group.id !== groupId) return group;
+            const memberIds = Array.isArray(group.memberIds) ? group.memberIds : [];
+            if (!memberIds.includes(userId)) return group;
+            const nextMemberIds = memberIds.filter((id) => id !== userId);
+            const nextMembersCount = Math.max(
+              (group.membersCount ?? memberIds.length) - 1,
+              nextMemberIds.length
+            );
+            return {
+              ...group,
+              membersCount: nextMembersCount,
+              memberIds: nextMemberIds,
+              adminIds: Array.isArray(group.adminIds)
+                ? group.adminIds.filter((id) => id !== userId)
+                : group.adminIds,
+            };
+          })
+        );
+
+        setProfileDoc((previous) => {
+          const base = previous ?? {};
+          const existing = Array.isArray(base.joinedGroups) ? base.joinedGroups : [];
+          if (!existing.includes(groupId)) return base;
+          const next = {
+            ...base,
+            id: userId,
+            joinedGroups: existing.filter((id) => id !== groupId),
+          };
+          if (userId) {
+            const cached = profilesCacheRef.current.get(userId) ?? {};
+            profilesCacheRef.current.set(userId, { ...cached, ...next, id: userId });
+          }
+          return next;
         });
       } finally {
         setIsMutating(false);
       }
     },
-    [joinedGroups, userId]
+    [joinedGroups, setGroups, setProfileDoc, userId]
   );
 
   const promoteGroupMember = useCallback(

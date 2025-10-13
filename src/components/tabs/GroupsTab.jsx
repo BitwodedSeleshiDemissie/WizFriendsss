@@ -62,6 +62,8 @@ export default function GroupsTab() {
   const [manageError, setManageError] = useState("");
   const [manageFeedback, setManageFeedback] = useState("");
   const [isManaging, setIsManaging] = useState(false);
+  const [pendingGroupId, setPendingGroupId] = useState(null);
+  const [pendingAction, setPendingAction] = useState(null);
 
   const [noticeForm, setNoticeForm] = useState({ title: "", message: "" });
   const [pollForm, setPollForm] = useState({
@@ -149,11 +151,15 @@ export default function GroupsTab() {
       setManageError("");
       setManageFeedback("");
       setIsManaging(true);
+      setPendingGroupId(group.id);
+      setPendingAction("join");
       await joinGroup(group.id);
       setManageFeedback(`You're now part of ${group.name}.`);
     } catch (error) {
       setManageError(error.message || "Unable to join this group right now.");
     } finally {
+      setPendingGroupId(null);
+      setPendingAction(null);
       setIsManaging(false);
     }
   };
@@ -167,11 +173,15 @@ export default function GroupsTab() {
       setManageError("");
       setManageFeedback("");
       setIsManaging(true);
+      setPendingGroupId(group.id);
+      setPendingAction("leave");
       await leaveGroup(group.id);
       setManageFeedback(`You left ${group.name}.`);
     } catch (error) {
       setManageError(error.message || "Unable to leave this group right now.");
     } finally {
+      setPendingGroupId(null);
+      setPendingAction(null);
       setIsManaging(false);
     }
   };
@@ -428,14 +438,23 @@ export default function GroupsTab() {
                               handleLeaveGroup(group);
                             }
                           }}
-                          disabled={!canLeave || isManaging || isMutating}
+                          disabled={
+                            !canLeave ||
+                            isManaging ||
+                            isMutating ||
+                            (pendingGroupId === group.id && pendingAction === "leave")
+                          }
                           className={`flex-1 rounded-full px-4 py-2 text-sm font-semibold transition ${
                             canLeave
                               ? "bg-red-100 text-red-600 hover:bg-red-200"
                               : "bg-gray-100 text-gray-400 cursor-not-allowed"
                           }`}
                         >
-                          {canLeave ? "Leave group" : "Owner"}
+                          {pendingGroupId === group.id && pendingAction === "leave"
+                            ? "Leaving..."
+                            : canLeave
+                            ? "Leave group"
+                            : "Owner"}
                         </button>
                       ) : (
                         <button
@@ -444,10 +463,16 @@ export default function GroupsTab() {
                             event.stopPropagation();
                             handleJoinGroup(group);
                           }}
-                          disabled={isManaging || isMutating}
+                          disabled={
+                            isManaging ||
+                            isMutating ||
+                            (pendingGroupId === group.id && pendingAction === "join")
+                          }
                           className="flex-1 rounded-full bg-gradient-to-r from-indigo-600 to-pink-500 px-4 py-2 text-sm font-semibold text-white shadow hover:shadow-lg transition"
                         >
-                          Join group
+                          {pendingGroupId === group.id && pendingAction === "join"
+                            ? "Joining..."
+                            : "Join group"}
                         </button>
                       )}
                       <button
