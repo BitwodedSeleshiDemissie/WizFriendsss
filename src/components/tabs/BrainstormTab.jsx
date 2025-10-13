@@ -1,29 +1,24 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
 import { useAppData } from "../../context/AppDataContext";
 
-export default function BrainstormTab() {
+export default function BrainstormTab({ onCreateActivity }) {
   const {
     ideas,
-    submitIdeaPrompt,
     endorseIdea,
     endorsementThreshold,
     currentUserId,
-    loading,
+    loadingIdeas,
   } = useAppData();
-  const [prompt, setPrompt] = useState("");
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    const trimmed = prompt.trim();
-    if (!trimmed) return;
-    submitIdeaPrompt(trimmed);
-    setPrompt("");
+  const handleCreateClick = () => {
+    if (typeof onCreateActivity === "function") {
+      onCreateActivity();
+    }
   };
 
-  if (loading) {
+  if (loadingIdeas) {
     return (
       <section className="rounded-3xl bg-white/80 backdrop-blur border border-white/60 shadow-xl p-10 flex items-center justify-center min-h-[40vh]">
         <p className="text-sm font-semibold text-indigo-500">Loading community brainstorms…</p>
@@ -33,36 +28,23 @@ export default function BrainstormTab() {
 
   return (
     <section className="space-y-12">
-      <div className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 md:p-10">
-        <h2 className="text-3xl font-extrabold text-gray-900">Brainstorm with the community</h2>
-        <p className="text-gray-600 mt-3 max-w-3xl">
-          Share the type of experience you want to have and let our AI generate an idea. Rally endorsements from the community—once an idea hits the threshold it becomes a live activity.
-        </p>
-
-        <form onSubmit={handleSubmit} className="mt-6 flex flex-col lg:flex-row gap-4">
-          <div className="flex-1 relative">
-            <textarea
-              value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
-              rows={3}
-              placeholder='e.g. "I want to meet people who love arthouse films"'
-              className="w-full rounded-3xl border border-gray-200 px-5 py-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white resize-none"
-            />
-            <span className="absolute right-6 top-4 text-xl text-indigo-400">✨</span>
-          </div>
-          <motion.button
-            whileHover={{ scale: 1.04 }}
-            whileTap={{ scale: 0.97 }}
-            type="submit"
-            className="lg:w-48 rounded-3xl bg-gradient-to-r from-indigo-600 to-pink-500 text-white font-semibold px-6 py-4 shadow-lg hover:shadow-xl transition-all"
-          >
-            Generate idea
-          </motion.button>
-        </form>
-
-        <p className="mt-3 text-sm text-gray-500">
-          Ideas become public activities automatically once they earn {endorsementThreshold} endorsements.
-        </p>
+      <div className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 md:p-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+        <div className="max-w-3xl space-y-4">
+          <h2 className="text-3xl font-extrabold text-gray-900">Brainstorm & bring it to life</h2>
+          <p className="text-gray-600">
+            Have an idea that deserves a spotlight? Turn it into a real activity and let the community rally
+            around it. You can still explore and endorse ideas below for extra momentum.
+          </p>
+        </div>
+        <motion.button
+          whileHover={{ scale: 1.04 }}
+          whileTap={{ scale: 0.97 }}
+          type="button"
+          onClick={handleCreateClick}
+          className="w-full lg:w-56 rounded-full bg-gradient-to-r from-indigo-600 to-pink-500 text-white font-semibold px-6 py-4 shadow-lg hover:shadow-xl transition-all text-center"
+        >
+          Post an activity
+        </motion.button>
       </div>
 
       <div className="space-y-6">
@@ -148,7 +130,7 @@ export default function BrainstormTab() {
         {ideas.length === 0 && (
           <div className="rounded-3xl border border-dashed border-indigo-300 bg-white/70 p-10 text-center text-gray-500">
             <h3 className="text-lg font-semibold text-indigo-500">No brainstorm ideas yet</h3>
-            <p className="mt-2">Start the conversation by sharing a prompt. The best ideas become real events.</p>
+            <p className="mt-2">Post an activity to get the community excited—or endorse one you love.</p>
           </div>
         )}
       </div>

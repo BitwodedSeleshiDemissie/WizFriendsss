@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import ActivitiesNearMeTab from "../../components/tabs/ActivitiesNearMeTab";
@@ -9,7 +9,6 @@ import BrainstormTab from "../../components/tabs/BrainstormTab";
 import GroupsTab from "../../components/tabs/GroupsTab";
 import ProfileTab from "../../components/tabs/ProfileTab";
 import BottomTabNav from "../../components/BottomTabNav";
-import FloatingActionButton from "../../components/FloatingActionButton";
 import { AppDataProvider, useAppData } from "../../context/AppDataContext";
 import ProtectedRoute from "../../components/ProtectedRoute";
 
@@ -31,6 +30,9 @@ function HomeContent() {
     notifications,
     groups,
     loading,
+    loadingActivities,
+    loadingGroups,
+    loadingNotifications,
     isMutating,
   } = useAppData();
 
@@ -56,6 +58,21 @@ function HomeContent() {
   );
 
   const [createForm, setCreateForm] = useState(defaultForm);
+
+  const openCreateModal = useCallback(() => {
+    if (activeTab !== "nearby") {
+      setActiveTab("nearby");
+      const destination = "/app";
+      router.replace(destination, { scroll: false });
+    }
+    setShowCreateModal(true);
+  }, [activeTab, router]);
+
+  const closeCreateModal = useCallback(() => {
+    setShowCreateModal(false);
+    const destination = activeTab === "nearby" ? "/app" : `/app?tab=${activeTab}`;
+    router.replace(destination, { scroll: false });
+  }, [activeTab, router]);
 
   useEffect(() => {
     setCreateForm(defaultForm);
@@ -98,7 +115,7 @@ function HomeContent() {
         })
       );
       setCreateForm(defaultForm);
-      setShowCreateModal(false);
+      closeCreateModal();
       handleTabChange("nearby", { scroll: false });
     } catch (error) {
       setFormError(error.message || "We couldn't publish the activity. Please try again.");
@@ -114,7 +131,7 @@ function HomeContent() {
       case "explore":
         return <ExploreTab />;
       case "brainstorm":
-        return <BrainstormTab />;
+        return <BrainstormTab onCreateActivity={openCreateModal} />;
       case "groups":
         return <GroupsTab />;
       case "profile":
@@ -124,9 +141,9 @@ function HomeContent() {
     }
   };
 
-  const totalUpcomingActivities = loading ? "…" : activities.length;
-  const totalGroups = loading ? "…" : groups.length;
-  const unreadNotifications = loading ? "…" : notifications.length;
+  const totalUpcomingActivities = loadingActivities ? "…" : activities.length;
+  const totalGroups = loadingGroups ? "…" : groups.length;
+  const unreadNotifications = loadingNotifications ? "…" : notifications.length;
 
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-white via-indigo-50 to-pink-100 text-gray-900 pb-40">
@@ -177,13 +194,6 @@ function HomeContent() {
         <section>{renderActiveTab()}</section>
       </div>
 
-      <FloatingActionButton
-        onClick={() => {
-          handleTabChange("nearby", { scroll: false });
-          setShowCreateModal(true);
-        }}
-      />
-
       <BottomTabNav
         tabs={TAB_CONFIG}
         activeTab={activeTab}
@@ -205,7 +215,7 @@ function HomeContent() {
               className="relative max-w-xl w-full rounded-3xl bg-white shadow-2xl border border-white/60 p-6 md:p-8 space-y-6"
             >
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={closeCreateModal}
                 className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
                 aria-label="Close create activity form"
               >
@@ -224,7 +234,7 @@ function HomeContent() {
                     value={createForm.title}
                     onChange={(event) => setCreateForm((prev) => ({ ...prev, title: event.target.value }))}
                     placeholder="Activity title"
-                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
                   <input
@@ -232,7 +242,7 @@ function HomeContent() {
                     value={createForm.category}
                     onChange={(event) => setCreateForm((prev) => ({ ...prev, category: event.target.value }))}
                     placeholder="Category (e.g. Wellness, Food)"
-                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
                 </div>
@@ -241,7 +251,7 @@ function HomeContent() {
                   onChange={(event) => setCreateForm((prev) => ({ ...prev, description: event.target.value }))}
                   rows={3}
                   placeholder="Describe who it's for and what to expect..."
-                  className="rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   required
                 />
                 <div className="grid sm:grid-cols-2 gap-4">
@@ -249,14 +259,14 @@ function HomeContent() {
                     type="date"
                     value={createForm.date}
                     onChange={(event) => setCreateForm((prev) => ({ ...prev, date: event.target.value }))}
-                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
                   <input
                     type="time"
                     value={createForm.time}
                     onChange={(event) => setCreateForm((prev) => ({ ...prev, time: event.target.value }))}
-                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
                 </div>
@@ -266,7 +276,7 @@ function HomeContent() {
                     value={createForm.location}
                     onChange={(event) => setCreateForm((prev) => ({ ...prev, location: event.target.value }))}
                     placeholder="Location"
-                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
                   <input
@@ -274,7 +284,7 @@ function HomeContent() {
                     value={createForm.city}
                     onChange={(event) => setCreateForm((prev) => ({ ...prev, city: event.target.value }))}
                     placeholder="City"
-                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div className="grid sm:grid-cols-3 gap-4">
@@ -284,7 +294,7 @@ function HomeContent() {
                     value={createForm.distance}
                     onChange={(event) => setCreateForm((prev) => ({ ...prev, distance: event.target.value }))}
                     placeholder="Distance (km)"
-                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                   <label className="flex items-center gap-2 text-sm text-gray-600 bg-gray-50 rounded-2xl px-4 py-3">
                     <input

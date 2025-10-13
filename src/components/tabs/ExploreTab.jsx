@@ -13,7 +13,7 @@ export default function ExploreTab() {
     toggleSaveActivity,
     joinedActivities,
     savedActivities,
-    loading,
+    loadingActivities,
   } = useAppData();
 
   const [searchTerm, setSearchTerm] = useState("");
@@ -37,7 +37,7 @@ export default function ExploreTab() {
     });
   }, [activities, searchTerm, selectedCity]);
 
-  if (loading) {
+  if (loadingActivities) {
     return (
       <section className="rounded-3xl bg-white/80 backdrop-blur border border-white/60 shadow-xl p-10 flex items-center justify-center min-h-[40vh]">
         <p className="text-sm font-semibold text-indigo-500">Loading explore catalogue…</p>

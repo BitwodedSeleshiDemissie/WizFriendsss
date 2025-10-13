@@ -1,8 +1,26 @@
 "use client";
 
+import { useMemo } from "react";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
 
 export default function AboutPage() {
+  const { user, loading } = useAuth();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const redirectTo = useMemo(() => {
+    if (!pathname) return "/app";
+    const query = searchParams?.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  }, [pathname, searchParams]);
+
+  const handleJoinClick = () => {
+    router.push(`/auth/login?redirect=${encodeURIComponent(redirectTo)}`);
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-indigo-50 to-purple-100 text-gray-800 font-body">
       {/* Hero Section */}
@@ -122,14 +140,16 @@ export default function AboutPage() {
 
       {/* CTA Section */}
       <section className="py-24 text-center">
-        <motion.a
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          href="/join"
-          className="inline-block bg-gradient-to-r from-indigo-600 to-pink-500 text-white text-lg font-semibold py-4 px-10 rounded-full shadow-xl hover:shadow-2xl transition-all"
-        >
-          Join the Movement
-        </motion.a>
+        {!loading && !user && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleJoinClick}
+            className="inline-block bg-gradient-to-r from-indigo-600 to-pink-500 text-white text-lg font-semibold py-4 px-10 rounded-full shadow-xl hover:shadow-2xl transition-all"
+          >
+            Join the Movement
+          </motion.button>
+        )}
       </section>
     </main>
   );

@@ -52,7 +52,7 @@ export default function ActivitiesNearMeTab() {
     savedActivities,
     joinActivity,
     toggleSaveActivity,
-    loading,
+    loadingActivities,
   } = useAppData();
   const [filters, setFilters] = useState({ category: "All", distance: "Any", date: "Any" });
 
@@ -89,7 +89,7 @@ export default function ActivitiesNearMeTab() {
       .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
   }, [activities, filters]);
 
-  if (loading) {
+  if (loadingActivities) {
     return (
       <section className="rounded-3xl bg-white/80 backdrop-blur border border-white/50 shadow-xl p-10 flex items-center justify-center min-h-[40vh]">
         <p className="text-sm font-semibold text-indigo-500">Loading activities around you…</p>

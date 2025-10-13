@@ -47,6 +47,10 @@ import {
 
 const AppDataContext = createContext();
 
+const ACTIVITIES_CACHE_KEY = "homeconnect.cache.activities";
+const GROUPS_CACHE_KEY = "homeconnect.cache.groups";
+const IDEAS_CACHE_KEY = "homeconnect.cache.ideas";
+
 function generateId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID();
@@ -54,41 +58,59 @@ function generateId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-async function fetchProfiles(dbRef, ids) {
-  if (!ids || ids.length === 0) return {};
-  const uniqueIds = Array.from(new Set(ids));
-  const results = await Promise.all(
-    uniqueIds.map(async (id) => {
-      const snapshot = await getDoc(doc(dbRef, "profiles", id));
-      if (!snapshot.exists()) return null;
-      return { id, ...snapshot.data() };
-    })
-  );
-  return results.filter(Boolean).reduce((acc, profile) => {
-    acc[profile.id] = profile;
-    return acc;
-  }, {});
+function readCollectionCache(key, fallback) {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
+function writeCollectionCache(key, value) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value));
+  } catch (error) {
+    // Swallow write errors (e.g. private browsing quota) silently.
+  }
 }
 
 export function AppDataProvider({ children }) {
   const { user, loading: authLoading } = useAuth();
   const userId = user?.uid ?? null;
 
-  const [activities, setActivities] = useState([]);
-  const [groups, setGroups] = useState([]);
-  const [ideas, setIdeas] = useState([]);
+  const [activities, setActivities] = useState(() =>
+    readCollectionCache(ACTIVITIES_CACHE_KEY, INITIAL_ACTIVITIES)
+  );
+  const [groups, setGroups] = useState(() =>
+    readCollectionCache(GROUPS_CACHE_KEY, INITIAL_GROUPS)
+  );
+  const [ideas, setIdeas] = useState(() =>
+    readCollectionCache(IDEAS_CACHE_KEY, INITIAL_IDEAS)
+  );
   const [notifications, setNotifications] = useState([]);
   const [profileDoc, setProfileDoc] = useState(null);
 
-  const [loadingActivities, setLoadingActivities] = useState(true);
-  const [loadingGroups, setLoadingGroups] = useState(true);
-  const [loadingIdeas, setLoadingIdeas] = useState(true);
-  const [loadingNotifications, setLoadingNotifications] = useState(true);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const [loadingActivities, setLoadingActivities] = useState(
+    () => readCollectionCache(ACTIVITIES_CACHE_KEY, INITIAL_ACTIVITIES).length === 0
+  );
+  const [loadingGroups, setLoadingGroups] = useState(
+    () => readCollectionCache(GROUPS_CACHE_KEY, INITIAL_GROUPS).length === 0
+  );
+  const [loadingIdeas, setLoadingIdeas] = useState(
+    () => readCollectionCache(IDEAS_CACHE_KEY, INITIAL_IDEAS).length === 0
+  );
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   const [isMutating, setIsMutating] = useState(false);
 
   const seedAppliedRef = useRef(false);
+  const profilesCacheRef = useRef(new Map());
 
   const profileFallback = useMemo(() => buildDefaultProfile(user), [user]);
 
@@ -195,6 +217,7 @@ export function AppDataProvider({ children }) {
         ...docSnap.data(),
       }));
       setActivities(docs);
+      writeCollectionCache(ACTIVITIES_CACHE_KEY, docs);
       setLoadingActivities(false);
     });
     return () => unsubscribe();
@@ -208,6 +231,7 @@ export function AppDataProvider({ children }) {
         ...docSnap.data(),
       }));
       setGroups(docs);
+      writeCollectionCache(GROUPS_CACHE_KEY, docs);
       setLoadingGroups(false);
     });
     return () => unsubscribe();
@@ -221,6 +245,7 @@ export function AppDataProvider({ children }) {
         ...docSnap.data(),
       }));
       setIdeas(docs);
+      writeCollectionCache(IDEAS_CACHE_KEY, docs);
       setLoadingIdeas(false);
     });
     return () => unsubscribe();
@@ -267,7 +292,9 @@ export function AppDataProvider({ children }) {
         });
         return;
       }
-      setProfileDoc(snapshot.data());
+      const data = snapshot.data();
+      profilesCacheRef.current.set(userId, { id: userId, ...data });
+      setProfileDoc(data);
       setProfileLoading(false);
     });
     return () => unsubscribe();
@@ -766,14 +793,50 @@ export function AppDataProvider({ children }) {
     });
   }, []);
 
-  const fetchGroupProfiles = useCallback((memberIds) => fetchProfiles(db, memberIds), []);
+  const fetchGroupProfiles = useCallback(async (memberIds) => {
+    if (!memberIds || memberIds.length === 0) return {};
+    const cache = profilesCacheRef.current;
+    const uniqueIds = Array.from(new Set(memberIds));
+    const result = {};
+    const missing = [];
+
+    uniqueIds.forEach((id) => {
+      if (cache.has(id)) {
+        result[id] = cache.get(id);
+      } else {
+        missing.push(id);
+      }
+    });
+
+    if (missing.length > 0) {
+      const fetched = await Promise.all(
+        missing.map(async (memberId) => {
+          const snapshot = await getDoc(doc(db, "profiles", memberId));
+          if (!snapshot.exists()) return null;
+          const profile = { id: memberId, ...snapshot.data() };
+          cache.set(memberId, profile);
+          return profile;
+        })
+      );
+      fetched.filter(Boolean).forEach((profile) => {
+        result[profile.id] = profile;
+      });
+    }
+
+    uniqueIds.forEach((id) => {
+      if (!result[id] && cache.has(id)) {
+        result[id] = cache.get(id);
+      }
+    });
+
+    return result;
+  }, []);
 
   const loading =
     authLoading ||
     loadingActivities ||
     loadingGroups ||
     loadingIdeas ||
-    loadingNotifications ||
     profileLoading;
 
   const value = useMemo(
@@ -808,6 +871,11 @@ export function AppDataProvider({ children }) {
       currentUserId: userId,
       currentUser: user,
       loading,
+      loadingActivities,
+      loadingGroups,
+      loadingIdeas,
+      loadingNotifications,
+      profileLoading,
       isMutating,
     }),
     [
@@ -830,6 +898,11 @@ export function AppDataProvider({ children }) {
       joinedGroups,
       leaveGroup,
       loading,
+      loadingActivities,
+      loadingGroups,
+      loadingIdeas,
+      loadingNotifications,
+      profileLoading,
       notifications,
       savedActivities,
       submitIdeaPrompt,

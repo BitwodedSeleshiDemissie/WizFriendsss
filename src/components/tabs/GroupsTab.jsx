@@ -41,7 +41,7 @@ export default function GroupsTab() {
     fetchGroupProfiles,
     currentUserId,
     userProfile,
-    loading,
+    loadingGroups,
     isMutating,
   } = useAppData();
 
@@ -342,7 +342,7 @@ export default function GroupsTab() {
         )}
       </div>
 
-      {loading ? (
+      {loadingGroups ? (
         <div className="rounded-3xl border border-white/60 bg-white/70 shadow-inner px-6 py-16 text-center text-sm font-semibold text-indigo-500">
           Loading community spaces…
         </div>
@@ -763,4 +763,3 @@ export default function GroupsTab() {
     </section>
   );
 }
-
