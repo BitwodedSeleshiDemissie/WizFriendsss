@@ -1,21 +1,68 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useMemo } from "react";
+import { useAppData } from "../../context/AppDataContext";
 
-export default function ProfileTab({
-  user,
-  activities,
-  groups,
-  joinedActivities,
-  joinedGroups,
-  savedActivities,
-  notifications,
-}) {
-  const joined = activities.filter((activity) => joinedActivities.includes(activity.id));
-  const favourites = activities.filter((activity) =>
-    (user.favourites || []).includes(activity.id) || savedActivities.includes(activity.id)
+function formatNotificationTime(notification) {
+  if (notification.timeLabel) return notification.timeLabel;
+  const createdAt = notification.createdAt?.toDate
+    ? notification.createdAt.toDate()
+    : typeof notification.createdAt === "number"
+    ? new Date(notification.createdAt)
+    : null;
+  if (!createdAt) return "Just now";
+  return createdAt.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+export default function ProfileTab() {
+  const {
+    userProfile: user,
+    activities,
+    groups,
+    joinedActivities,
+    joinedGroups,
+    savedActivities,
+    notifications,
+    loading,
+    ideas,
+    currentUserId,
+  } = useAppData();
+
+  const joined = useMemo(
+    () => activities.filter((activity) => joinedActivities.includes(activity.id)),
+    [activities, joinedActivities]
   );
-  const myGroups = groups.filter((group) => joinedGroups.includes(group.id));
+
+  const favourites = useMemo(
+    () =>
+      activities.filter(
+        (activity) => (user.favourites || []).includes(activity.id) || savedActivities.includes(activity.id)
+      ),
+    [activities, savedActivities, user.favourites]
+  );
+
+  const myGroups = useMemo(
+    () => groups.filter((group) => joinedGroups.includes(group.id)),
+    [groups, joinedGroups]
+  );
+
+  const ideasEndorsed = useMemo(
+    () => ideas.filter((idea) => idea.supporters?.includes(currentUserId)).length,
+    [ideas, currentUserId]
+  );
+
+  if (loading) {
+    return (
+      <section className="min-h-[50vh] flex items-center justify-center bg-white/70 rounded-3xl border border-white/60 shadow-inner">
+        <p className="text-sm font-semibold text-indigo-500">Loading profile data…</p>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-10">
@@ -50,7 +97,7 @@ export default function ProfileTab({
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard label="Activities joined" value={joinedActivities.length} icon="🎉" />
         <StatCard label="Groups" value={joinedGroups.length} icon="🤝" />
-        <StatCard label="Ideas endorsed" value={user.ideasEndorsed} icon="💡" />
+        <StatCard label="Ideas endorsed" value={ideasEndorsed} icon="💡" />
         <StatCard label="Upcoming invites" value={notifications.length} icon="🔔" />
       </div>
 
@@ -81,7 +128,7 @@ export default function ProfileTab({
           renderItem={(notification) => (
             <div className="space-y-1">
               <p className="text-sm font-semibold text-gray-800">{notification.title}</p>
-              <p className="text-xs text-gray-500">{notification.time}</p>
+              <p className="text-xs text-gray-500">{formatNotificationTime(notification)}</p>
               <p className="text-xs text-gray-500">{notification.message}</p>
             </div>
           )}
@@ -98,7 +145,7 @@ export default function ProfileTab({
             <div className="space-y-1">
               <p className="text-sm font-semibold text-gray-800">{group.name}</p>
               <p className="text-xs text-gray-500">
-                {group.members} members · next {group.nextActivity}
+                {(group.membersCount ?? group.members ?? 0)} members · next {group.nextActivity}
               </p>
             </div>
           )}
@@ -180,4 +227,3 @@ function Section({ title, description, emptyHint, items, renderItem }) {
     </div>
   );
 }
-

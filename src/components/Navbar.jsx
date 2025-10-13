@@ -19,10 +19,10 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { label: "Activities", href: "/?tab=nearby" },
-    { label: "Explore", href: "/?tab=explore" },
-    { label: "Brainstorm", href: "/?tab=brainstorm" },
-    { label: "Groups", href: "/?tab=groups" },
+    { label: "Product", href: "/#product" },
+    { label: "Experience", href: "/app" },
+    { label: "Brainstorm", href: "/app?tab=brainstorm" },
+    { label: "Groups", href: "/app?tab=groups" },
     { label: "About", href: "/about" },
   ];
 

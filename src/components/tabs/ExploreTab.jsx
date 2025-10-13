@@ -2,16 +2,20 @@
 
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useAppData } from "../../context/AppDataContext";
 
-export default function ExploreTab({
-  activities,
-  featured,
-  trending,
-  onJoin,
-  onSave,
-  joinedActivities,
-  savedActivities,
-}) {
+export default function ExploreTab() {
+  const {
+    activities,
+    featuredActivities,
+    trendingActivities,
+    joinActivity,
+    toggleSaveActivity,
+    joinedActivities,
+    savedActivities,
+    loading,
+  } = useAppData();
+
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCity, setSelectedCity] = useState("All");
 
@@ -32,6 +36,14 @@ export default function ExploreTab({
       return matchesCity && matchesSearch;
     });
   }, [activities, searchTerm, selectedCity]);
+
+  if (loading) {
+    return (
+      <section className="rounded-3xl bg-white/80 backdrop-blur border border-white/60 shadow-xl p-10 flex items-center justify-center min-h-[40vh]">
+        <p className="text-sm font-semibold text-indigo-500">Loading explore catalogue…</p>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-10">
@@ -67,7 +79,7 @@ export default function ExploreTab({
         </div>
       </div>
 
-      {featured.length > 0 && (
+      {featuredActivities.length > 0 && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-xl font-semibold text-gray-900">Featured activities</h3>
@@ -76,7 +88,7 @@ export default function ExploreTab({
             </span>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featured.map((activity) => {
+            {featuredActivities.map((activity) => {
               const joined = joinedActivities.includes(activity.id);
               const saved = savedActivities.includes(activity.id);
               const eventDate = new Date(activity.dateTime);
@@ -108,7 +120,7 @@ export default function ExploreTab({
                       whileHover={{ scale: joined ? 1 : 1.03 }}
                       whileTap={{ scale: joined ? 1 : 0.97 }}
                       disabled={joined}
-                      onClick={() => onJoin(activity.id)}
+                      onClick={() => joinActivity(activity.id)}
                       className={`flex-1 py-2.5 rounded-full text-sm font-semibold transition-all ${
                         joined
                           ? "bg-gray-200 text-gray-500 cursor-not-allowed"
@@ -118,7 +130,7 @@ export default function ExploreTab({
                       {joined ? "Joined" : "Join"}
                     </motion.button>
                     <button
-                      onClick={() => onSave(activity.id)}
+                      onClick={() => toggleSaveActivity(activity.id)}
                       className={`w-11 h-11 rounded-full border flex items-center justify-center transition ${
                         saved
                           ? "border-pink-500 text-pink-500 bg-pink-50"
@@ -135,7 +147,7 @@ export default function ExploreTab({
         </div>
       )}
 
-      {trending.length > 0 && (
+      {trendingActivities.length > 0 && (
         <div className="rounded-3xl bg-gradient-to-r from-indigo-50 to-pink-50 border border-white/60 shadow-xl p-6 md:p-8">
           <div className="flex items-center justify-between mb-5">
             <h3 className="text-xl font-semibold text-gray-900">Trending this week</h3>
@@ -144,7 +156,7 @@ export default function ExploreTab({
             </span>
           </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {trending.map((activity) => (
+            {trendingActivities.map((activity) => (
               <div key={activity.id} className="bg-white rounded-2xl shadow border border-gray-100 p-4 space-y-2">
                 <p className="text-xs uppercase tracking-widest text-indigo-500 font-semibold">
                   {activity.category}
@@ -201,26 +213,26 @@ export default function ExploreTab({
                 </div>
 
                 <div className="flex items-center gap-4 mt-4">
-                  <motion.button
-                    whileHover={{ scale: joined ? 1 : 1.03 }}
-                    whileTap={{ scale: joined ? 1 : 0.97 }}
-                    disabled={joined}
-                    onClick={() => onJoin(activity.id)}
-                    className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
-                      joined
-                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                        : "bg-gradient-to-r from-indigo-600 to-pink-500 text-white shadow-md hover:shadow-lg"
-                    }`}
+              <motion.button
+                whileHover={{ scale: joined ? 1 : 1.03 }}
+                whileTap={{ scale: joined ? 1 : 0.97 }}
+                disabled={joined}
+                onClick={() => joinActivity(activity.id)}
+                className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
+                  joined
+                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                    : "bg-gradient-to-r from-indigo-600 to-pink-500 text-white shadow-md hover:shadow-lg"
+                }`}
                   >
                     {joined ? "Joined" : "Join"}
-                  </motion.button>
-                  <button
-                    onClick={() => onSave(activity.id)}
-                    className={`w-11 h-11 rounded-full border flex items-center justify-center transition ${
-                      saved
-                        ? "border-pink-500 text-pink-500 bg-pink-50"
-                        : "border-gray-200 text-gray-400 hover:text-pink-500 hover:border-pink-500"
-                    }`}
+              </motion.button>
+              <button
+                onClick={() => toggleSaveActivity(activity.id)}
+                className={`w-11 h-11 rounded-full border flex items-center justify-center transition ${
+                  saved
+                    ? "border-pink-500 text-pink-500 bg-pink-50"
+                    : "border-gray-200 text-gray-400 hover:text-pink-500 hover:border-pink-500"
+                }`}
                   >
                     {saved ? "♥" : "♡"}
                   </button>
@@ -234,4 +246,3 @@ export default function ExploreTab({
     </section>
   );
 }
-

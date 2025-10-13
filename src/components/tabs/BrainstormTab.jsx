@@ -2,23 +2,34 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useAppData } from "../../context/AppDataContext";
 
-export default function BrainstormTab({
-  ideas,
-  onSubmitPrompt,
-  onEndorseIdea,
-  endorsementThreshold,
-  currentUserId,
-}) {
+export default function BrainstormTab() {
+  const {
+    ideas,
+    submitIdeaPrompt,
+    endorseIdea,
+    endorsementThreshold,
+    currentUserId,
+    loading,
+  } = useAppData();
   const [prompt, setPrompt] = useState("");
 
   const handleSubmit = (event) => {
     event.preventDefault();
     const trimmed = prompt.trim();
     if (!trimmed) return;
-    onSubmitPrompt(trimmed);
+    submitIdeaPrompt(trimmed);
     setPrompt("");
   };
+
+  if (loading) {
+    return (
+      <section className="rounded-3xl bg-white/80 backdrop-blur border border-white/60 shadow-xl p-10 flex items-center justify-center min-h-[40vh]">
+        <p className="text-sm font-semibold text-indigo-500">Loading community brainstorms…</p>
+      </section>
+    );
+  }
 
   return (
     <section className="space-y-12">
@@ -116,7 +127,7 @@ export default function BrainstormTab({
                 <motion.button
                   whileHover={{ scale: hasEndorsed ? 1 : 1.03 }}
                   whileTap={{ scale: hasEndorsed ? 1 : 0.97 }}
-                  onClick={() => onEndorseIdea(idea.id)}
+                  onClick={() => endorseIdea(idea.id)}
                   disabled={hasEndorsed || idea.status === "launched"}
                   className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
                     hasEndorsed || idea.status === "launched"
@@ -144,4 +155,3 @@ export default function BrainstormTab({
     </section>
   );
 }
-

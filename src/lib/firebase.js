@@ -1,6 +1,7 @@
 // src/lib/firebase.js
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBDqCCwrkIf6RoBT7cvQySDx17Iv1rtSjM",
@@ -16,8 +17,9 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
+const db = getFirestore(app);
 
 // ✅ Persist user session even after refresh / redirect
 setPersistence(auth, browserLocalPersistence);
 
-export { app, auth, provider };
+export { app, auth, provider, db };

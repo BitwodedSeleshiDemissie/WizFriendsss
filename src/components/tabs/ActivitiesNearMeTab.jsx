@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useAppData } from "../../context/AppDataContext";
 
 const distanceOptions = [
   { label: "Any distance", value: "Any" },
@@ -43,17 +44,26 @@ function matchesDateFilter(eventDate, filter) {
   return true;
 }
 
-export default function ActivitiesNearMeTab({
-  activities,
-  filters,
-  onFilterChange,
-  categories,
-  onResetFilters,
-  joinedActivities,
-  savedActivities,
-  onJoin,
-  onSave,
-}) {
+export default function ActivitiesNearMeTab() {
+  const {
+    activities,
+    categories,
+    joinedActivities,
+    savedActivities,
+    joinActivity,
+    toggleSaveActivity,
+    loading,
+  } = useAppData();
+  const [filters, setFilters] = useState({ category: "All", distance: "Any", date: "Any" });
+
+  const handleFilterChange = (key, value) => {
+    setFilters((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const resetFilters = () => {
+    setFilters({ category: "All", distance: "Any", date: "Any" });
+  };
+
   const nearbyActivities = useMemo(() => {
     const base = activities.filter((activity) => activity.isNearby);
 
@@ -79,6 +89,14 @@ export default function ActivitiesNearMeTab({
       .sort((a, b) => new Date(a.dateTime) - new Date(b.dateTime));
   }, [activities, filters]);
 
+  if (loading) {
+    return (
+      <section className="rounded-3xl bg-white/80 backdrop-blur border border-white/50 shadow-xl p-10 flex items-center justify-center min-h-[40vh]">
+        <p className="text-sm font-semibold text-indigo-500">Loading activities around you…</p>
+      </section>
+    );
+  }
+
   return (
     <section className="space-y-8">
       <div className="rounded-3xl bg-white/80 backdrop-blur border border-white/50 shadow-xl p-6 md:p-10">
@@ -92,7 +110,7 @@ export default function ActivitiesNearMeTab({
           </div>
 
           <button
-            onClick={onResetFilters}
+            onClick={resetFilters}
             className="self-start md:self-auto text-sm font-semibold text-indigo-600 hover:text-pink-500 transition"
           >
             Reset filters
@@ -104,7 +122,7 @@ export default function ActivitiesNearMeTab({
             <label className="text-xs uppercase tracking-wide text-gray-500">Category</label>
             <select
               value={filters.category}
-              onChange={(e) => onFilterChange("category", e.target.value)}
+              onChange={(e) => handleFilterChange("category", e.target.value)}
               className="rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             >
               <option value="All">All categories</option>
@@ -120,7 +138,7 @@ export default function ActivitiesNearMeTab({
             <label className="text-xs uppercase tracking-wide text-gray-500">Distance</label>
             <select
               value={filters.distance}
-              onChange={(e) => onFilterChange("distance", e.target.value)}
+              onChange={(e) => handleFilterChange("distance", e.target.value)}
               className="rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             >
               {distanceOptions.map((option) => (
@@ -135,7 +153,7 @@ export default function ActivitiesNearMeTab({
             <label className="text-xs uppercase tracking-wide text-gray-500">Date</label>
             <select
               value={filters.date}
-              onChange={(e) => onFilterChange("date", e.target.value)}
+              onChange={(e) => handleFilterChange("date", e.target.value)}
               className="rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             >
               {dateOptions.map((option) => (
@@ -202,7 +220,7 @@ export default function ActivitiesNearMeTab({
                 <motion.button
                   whileHover={{ scale: joined ? 1 : 1.03 }}
                   whileTap={{ scale: joined ? 1 : 0.97 }}
-                  onClick={() => onJoin(activity.id)}
+                  onClick={() => joinActivity(activity.id)}
                   disabled={joined}
                   className={`flex-1 py-2.5 rounded-full text-sm font-semibold transition-all ${
                     joined
@@ -214,7 +232,7 @@ export default function ActivitiesNearMeTab({
                 </motion.button>
 
                 <button
-                  onClick={() => onSave(activity.id)}
+                  onClick={() => toggleSaveActivity(activity.id)}
                   className={`w-12 h-12 rounded-full border flex items-center justify-center transition ${
                     saved
                       ? "border-pink-500 text-pink-500 bg-pink-50"
@@ -241,4 +259,3 @@ export default function ActivitiesNearMeTab({
     </section>
   );
 }
-
