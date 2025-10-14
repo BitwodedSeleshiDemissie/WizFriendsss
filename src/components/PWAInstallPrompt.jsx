@@ -60,7 +60,7 @@ export default function PWAInstallPrompt() {
       <div className="flex items-start gap-3">
         <div className="rounded-full bg-indigo-50 p-2 text-indigo-500">📲</div>
         <div className="flex-1">
-          <p className="text-sm font-semibold text-gray-900">Install HomeConnect</p>
+          <p className="text-sm font-semibold text-gray-900">Install WizFriends</p>
           <p className="mt-1 text-xs text-gray-600">
             Add this app to your device for faster access and offline support.
           </p>

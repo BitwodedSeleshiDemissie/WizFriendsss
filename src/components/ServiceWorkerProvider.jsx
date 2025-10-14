@@ -19,6 +19,23 @@ const isSecureContext = () => {
   );
 };
 
+const registerServiceWorker = async () => {
+  try {
+    const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+
+    // Ensure the newest SW takes control ASAP when an update ships.
+    if (registration.waiting) {
+      registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    }
+
+    if (process.env.NODE_ENV !== "production") {
+      console.info("Service worker registered for PWA testing.", registration);
+    }
+  } catch (error) {
+    console.error("Service worker registration failed:", error);
+  }
+};
+
 export default function ServiceWorkerProvider() {
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -37,36 +54,25 @@ export default function ServiceWorkerProvider() {
       return;
     }
 
-    let removedLoadListener = false;
-    const register = async () => {
-      try {
-        const existing = await navigator.serviceWorker.getRegistration("/");
-        if (existing) {
-          return;
-        }
+    let pendingLoadListener = null;
 
-        await navigator.serviceWorker.register("/sw.js", { scope: "/" });
-
-        if (process.env.NODE_ENV !== "production") {
-          console.info("Service worker registered for PWA testing.");
-        }
-      } catch (error) {
-        console.error("Service worker registration failed:", error);
-      }
+    const startRegistration = () => {
+      registerServiceWorker();
+      window.removeEventListener("load", startRegistration);
     };
 
-    if (document.readyState === "complete") {
-      register();
+    if (document.readyState === "complete" || document.readyState === "interactive") {
+      registerServiceWorker();
     } else {
-      const onLoad = () => register();
-      window.addEventListener("load", onLoad);
-      removedLoadListener = true;
-      return () => {
-        if (removedLoadListener) {
-          window.removeEventListener("load", onLoad);
-        }
-      };
+      pendingLoadListener = startRegistration;
+      window.addEventListener("load", pendingLoadListener);
     }
+
+    return () => {
+      if (pendingLoadListener) {
+        window.removeEventListener("load", pendingLoadListener);
+      }
+    };
   }, []);
 
   return null;

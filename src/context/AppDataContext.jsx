@@ -47,9 +47,9 @@ import {
 
 const AppDataContext = createContext();
 
-const ACTIVITIES_CACHE_KEY = "homeconnect.cache.activities";
-const GROUPS_CACHE_KEY = "homeconnect.cache.groups";
-const IDEAS_CACHE_KEY = "homeconnect.cache.ideas";
+const ACTIVITIES_CACHE_KEY = "wizfriends.cache.activities";
+const GROUPS_CACHE_KEY = "wizfriends.cache.groups";
+const IDEAS_CACHE_KEY = "wizfriends.cache.ideas";
 
 function generateId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {

@@ -76,7 +76,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1, duration: 0.6 }}
-              className="text-4xl md:text-6xl font-black leading-tight tracking-tight text-gray-900"
+              className="text-3xl sm:text-5xl md:text-6xl font-black leading-tight tracking-tight text-gray-900"
             >
               Launch the community layer your people have been waiting for.
             </motion.h1>
@@ -84,7 +84,7 @@ export default function LandingPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2, duration: 0.6 }}
-              className="text-lg md:text-xl text-gray-600"
+              className="text-base sm:text-lg md:text-xl text-gray-600"
             >
               WizFriends helps global teams, campus programs, and city partners turn strangers into recurring groups.
               AI-curated activities, endorsement workflows, and verified hosts—all in one modern web app experience.
@@ -124,10 +124,10 @@ export default function LandingPage() {
       <section id="product" className="py-24 bg-white">
         <div className="max-w-6xl mx-auto px-6 lg:px-12 grid md:grid-cols-[1.2fr,0.8fr] gap-12 items-center">
           <div className="space-y-6">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
               Everything you need to run real-world community programs.
             </h2>
-            <p className="text-gray-600 text-lg">
+            <p className="text-gray-600 text-base sm:text-lg">
               WizFriends is purpose-built for social discovery. We orchestrate event discovery, communal ideation,
               and group continuity so you can focus on storytelling and safety.
             </p>
@@ -181,8 +181,8 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 lg:px-12">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-10">
             <div className="max-w-xl space-y-4">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Teams trust WizFriends with belonging.</h2>
-              <p className="text-gray-600">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">Teams trust WizFriends with belonging.</h2>
+              <p className="text-gray-600 text-base sm:text-lg">
                 From global mobility programs to university welcome centres, WizFriends keeps communities lively and accountable.
               </p>
             </div>
@@ -224,8 +224,8 @@ export default function LandingPage() {
       <section className="py-24 bg-white" id="install">
         <div className="max-w-6xl mx-auto px-6 lg:px-12 space-y-12">
           <div className="max-w-3xl space-y-4">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Install WizFriends on your devices</h2>
-            <p className="text-lg text-gray-600">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">Install WizFriends on your devices</h2>
+            <p className="text-base sm:text-lg text-gray-600">
               WizFriends is a progressive web app, so you can add it to your home screen in just a few taps—no app store
               submission needed. Follow the quick steps below to stay one tap away from your community.
             </p>
@@ -263,8 +263,8 @@ export default function LandingPage() {
       <section className="py-24 bg-indigo-900 text-white">
         <div className="max-w-6xl mx-auto px-6 lg:px-12 flex flex-col lg:flex-row items-center justify-between gap-10">
           <div className="max-w-3xl space-y-4">
-            <h2 className="text-3xl md:text-4xl font-bold">Ready to launch your community engine?</h2>
-            <p className="text-indigo-100 text-lg">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold">Ready to launch your community engine?</h2>
+            <p className="text-indigo-100 text-base sm:text-lg">
               Book a strategy session with our community engineers or jump straight into the app to prototype your first experience.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">

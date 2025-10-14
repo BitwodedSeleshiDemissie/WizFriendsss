@@ -5,12 +5,13 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { signInWithPopup } from "firebase/auth";
+import { signInWithPopup, signInWithRedirect } from "firebase/auth";
 import { auth, provider } from "@/lib/firebase";
 import { useAuth } from "@/context/AuthContext";
 
 export default function LoginClient({ redirectTo }) {
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
 
@@ -25,15 +26,40 @@ export default function LoginClient({ redirectTo }) {
   }
 
   const handleGoogleLogin = async () => {
+    setErrorMessage(null);
     setLoading(true);
+    let resetLoader = true;
     try {
       const result = await signInWithPopup(auth, provider);
       console.log("✅ Logged in as:", result.user.displayName);
       router.replace(redirectTo);
     } catch (error) {
-      console.error("❌ Google login error:", error.message);
+      console.error("❌ Google login error:", error);
+      const code = error?.code ?? "";
+
+      if (code === "auth/popup-blocked" || code === "auth/popup-closed-by-user") {
+        try {
+          resetLoader = false;
+          await signInWithRedirect(auth, provider);
+          return;
+        } catch (redirectError) {
+          resetLoader = true;
+          console.error("Fallback redirect sign-in failed:", redirectError);
+          setErrorMessage("We couldn't open the Google sign-in window. Please allow pop-ups and try again.");
+        }
+      } else if (code === "auth/unauthorized-domain") {
+        const host = typeof window !== "undefined" ? window.location.host : "this domain";
+        setErrorMessage(
+          `Google sign-in is blocked because ${host} is not on Firebase Authentication's authorized domains list. ` +
+            "Ask the project owner to add this domain under Authentication → Settings in the Firebase console."
+        );
+      } else {
+        setErrorMessage("Google sign-in failed. Please try again in a new tab or contact support.");
+      }
     } finally {
-      setLoading(false);
+      if (resetLoader) {
+        setLoading(false);
+      }
     }
   };
 
@@ -98,6 +124,9 @@ export default function LoginClient({ redirectTo }) {
           <Image src="/google-icon.svg" alt="Google" width={20} height={20} />
           {loading ? "Connecting..." : "Continue with Google"}
         </motion.button>
+        {errorMessage ? (
+          <p className="mt-4 text-sm text-red-500 text-center">{errorMessage}</p>
+        ) : null}
 
         <p className="text-center text-gray-500 mt-8">
           Don’t have an account?{" "}

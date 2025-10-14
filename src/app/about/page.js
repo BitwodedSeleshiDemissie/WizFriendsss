@@ -51,7 +51,7 @@ function AboutPageContent() {
             transition={{ duration: 1, delay: 0.3 }}
             className="mt-8 text-lg md:text-xl leading-relaxed text-gray-700"
           >
-            <span className="font-semibold text-indigo-600">HomeConnect</span> 
+            <span className="font-semibold text-indigo-600">WizFriends</span> 
             was born from a feeling shared by millions — the ache of being far 
             from home, searching for belonging in an unfamiliar place. Whether 
             you’re an international student, a young professional, or simply 
@@ -93,7 +93,7 @@ function AboutPageContent() {
           </p>
           <p className="text-gray-700 leading-relaxed text-lg">
             That’s why we’re building{" "}
-            <span className="font-semibold text-indigo-600">HomeConnect</span>: 
+            <span className="font-semibold text-indigo-600">WizFriends</span>: 
             a place where every new city can feel like home — through shared 
             passions, meaningful experiences, and the people who make it all matter.
           </p>
@@ -133,7 +133,7 @@ function AboutPageContent() {
         >
           We exist to help people rediscover belonging — by connecting them 
           through shared interests, authentic communities, and real human 
-          stories. HomeConnect isn’t just an app — it’s a movement toward a 
+          stories. WizFriends isn’t just an app — it’s a movement toward a 
           more connected, compassionate world.
         </motion.p>
       </section>

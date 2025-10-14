@@ -44,7 +44,7 @@ export default function Navbar() {
             whileHover={{ scale: 1.05 }}
             className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent cursor-pointer"
           >
-            HomeConnect
+            WizFriends
           </motion.h1>
         </Link>
 

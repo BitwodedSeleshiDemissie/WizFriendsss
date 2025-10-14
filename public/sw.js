@@ -6,7 +6,14 @@ const isSameOrigin = (request) => new URL(request.url).origin === self.location.
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PREFETCH_ASSETS))
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      try {
+        await cache.addAll(PREFETCH_ASSETS);
+      } catch (error) {
+        console.warn("SW prefetch failed; continuing without full cache.", error);
+      }
+    })()
   );
   self.skipWaiting();
 });
@@ -20,6 +27,12 @@ self.addEventListener("activate", (event) => {
       )
       .then(() => self.clients.claim())
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {

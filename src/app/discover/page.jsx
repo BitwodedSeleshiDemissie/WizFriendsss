@@ -8,8 +8,8 @@ import { useAuth } from "../../context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 
 const STORAGE_KEYS = {
-  potential: "homeconnect_potential_events",
-  live: "homeconnect_live_events",
+  potential: "wizfriends_potential_events",
+  live: "wizfriends_live_events",
 };
 
 const MIN_ENDORSEMENTS = 3;

@@ -1,9 +1,9 @@
 export default function manifest() {
   return {
-    name: "MyProject Web App",
-    short_name: "MyProject",
+    name: "WizFriends",
+    short_name: "WizFriends",
     description:
-      "Access the MyProject experience on mobile with offline support and installable features.",
+      "Create and nurture real-world friendships with the WizFriends community platform.",
     start_url: "/",
     scope: "/",
     display: "standalone",
@@ -13,22 +13,22 @@ export default function manifest() {
     lang: "en-US",
     icons: [
       {
-        src: "/icons/apple-touch-icon.png",
-        sizes: "180x180",
-        type: "image/png",
-        purpose: "any maskable",
-      },
-      {
-        src: "/icons/icon-192x192.png",
+        src: "/icons/wizfriends-icon-192.png",
         sizes: "192x192",
         type: "image/png",
         purpose: "any maskable",
       },
       {
-        src: "/icons/icon-512x512.png",
+        src: "/icons/wizfriends-icon-512.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "any maskable",
+      },
+      {
+        src: "/icons/wizfriends-icon-180.png",
+        sizes: "180x180",
+        type: "image/png",
+        purpose: "any",
       },
     ],
   };

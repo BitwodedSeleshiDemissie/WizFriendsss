@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
 
-const STORAGE_KEY_POTENTIAL = "homeconnect_potential_events";
+const STORAGE_KEY_POTENTIAL = "wizfriends_potential_events";
 
 export default function NewActivityPage() {
   const router = useRouter();

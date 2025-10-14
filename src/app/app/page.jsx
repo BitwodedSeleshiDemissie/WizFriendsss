@@ -151,7 +151,7 @@ function HomeContent() {
         <header className="rounded-3xl bg-white/80 backdrop-blur border border-white/60 shadow-xl p-8 md:p-12 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
           <div className="space-y-4">
             <p className="text-xs uppercase tracking-[0.3em] text-indigo-500 font-semibold">
-              HomeConnect · Product v1.0
+              WizFriends · Product v1.0
             </p>
             <h1 className="text-4xl md:text-5xl font-black leading-tight">
               Find your people, wherever you are.
