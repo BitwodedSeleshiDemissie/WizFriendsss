@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 
-export default function AboutPage() {
+function AboutPageContent() {
   const { user, loading } = useAuth();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -152,5 +152,19 @@ export default function AboutPage() {
         )}
       </section>
     </main>
+  );
+}
+
+export default function AboutPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white via-indigo-50 to-purple-100 text-gray-600">
+          <p className="text-sm font-semibold text-indigo-500">Loading our story…</p>
+        </main>
+      }
+    >
+      <AboutPageContent />
+    </Suspense>
   );
 }

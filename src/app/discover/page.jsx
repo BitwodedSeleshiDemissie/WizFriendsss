@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -89,7 +89,7 @@ const communities = [
   },
 ];
 
-export default function DiscoverPage() {
+function DiscoverPageContent() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -485,5 +485,24 @@ export default function DiscoverPage() {
         </div>
       )}
     </main>
+  );
+}
+
+export default function DiscoverPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-white via-indigo-50 to-pink-50 text-gray-500">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 1 }}
+            className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full mb-4"
+          />
+          <p className="text-sm font-medium">Loading discover feed…</p>
+        </main>
+      }
+    >
+      <DiscoverPageContent />
+    </Suspense>
   );
 }

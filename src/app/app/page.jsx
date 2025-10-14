@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import ActivitiesNearMeTab from "../../components/tabs/ActivitiesNearMeTab";
@@ -342,10 +342,18 @@ function HomeContent() {
 
 export default function AppPage() {
   return (
-    <ProtectedRoute>
-      <AppDataProvider>
-        <HomeContent />
-      </AppDataProvider>
-    </ProtectedRoute>
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white via-indigo-50 to-pink-100 text-gray-500">
+          <p className="text-sm font-semibold text-indigo-500">Loading your dashboard…</p>
+        </main>
+      }
+    >
+      <ProtectedRoute>
+        <AppDataProvider>
+          <HomeContent />
+        </AppDataProvider>
+      </ProtectedRoute>
+    </Suspense>
   );
 }
