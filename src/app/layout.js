@@ -2,6 +2,7 @@ import "./globals.css";
 import { AuthProvider } from "../context/AuthContext";
 import Navbar from "../components/Navbar";
 import ServiceWorkerProvider from "../components/ServiceWorkerProvider";
+import PWAInstallPrompt from "../components/PWAInstallPrompt";
 
 export const metadata = {
   title: {
@@ -11,7 +12,6 @@ export const metadata = {
   description:
     "Install the MyProject PWA to stay connected on mobile with offline-first access.",
   manifest: "/manifest.webmanifest",
-  themeColor: "#2563eb",
   appleWebApp: {
     capable: true,
     title: "MyProject",
@@ -26,12 +26,17 @@ export const metadata = {
   },
 };
 
+export const viewport = {
+  themeColor: "#2563eb",
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body>
         <AuthProvider>
           <ServiceWorkerProvider />
+          <PWAInstallPrompt />
           <Navbar />
           {children}
         </AuthProvider>
