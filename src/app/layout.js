@@ -6,22 +6,22 @@ import PWAInstallPrompt from "../components/PWAInstallPrompt";
 
 export const metadata = {
   title: {
-    default: "MyProject",
-    template: "%s | MyProject",
+    default: "WizFriends",
+    template: "%s | WizFriends",
   },
   description:
-    "Install the MyProject PWA to stay connected on mobile with offline-first access.",
+    "Install the WizFriends PWA to stay connected with your community anywhere.",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
-    title: "MyProject",
+    title: "WizFriends",
     statusBarStyle: "default",
   },
   icons: {
-    apple: "/icons/apple-touch-icon.png",
+    apple: "/icons/wizfriends-icon-180.png",
     icon: [
-      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+      { url: "/icons/wizfriends-icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/wizfriends-icon-512.png", sizes: "512x512", type: "image/png" },
     ],
   },
 };

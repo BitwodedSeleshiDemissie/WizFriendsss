@@ -32,7 +32,7 @@ const features = [
 const testimonials = [
   {
     quote:
-      "We piloted HomeConnect for our relocation program—86% of participants built a new friendship within two weeks.",
+      "We piloted WizFriends for our relocation program—86% of participants built a new friendship within two weeks.",
     name: "Zara Patel",
     role: "Global Mobility Lead, NimbleTech",
     avatar: "/pics/5.jpg",
@@ -70,7 +70,7 @@ export default function LandingPage() {
               transition={{ duration: 0.6 }}
               className="inline-flex items-center gap-2 bg-white/70 backdrop-blur px-4 py-2 rounded-full text-sm font-semibold text-indigo-600 border border-indigo-100"
             >
-              HomeConnect v1.0 · Built for belonging
+              WizFriends v1.0 · Built for belonging
             </motion.p>
             <motion.h1
               initial={{ opacity: 0, y: 20 }}
@@ -86,7 +86,7 @@ export default function LandingPage() {
               transition={{ delay: 0.2, duration: 0.6 }}
               className="text-lg md:text-xl text-gray-600"
             >
-              HomeConnect helps global teams, campus programs, and city partners turn strangers into recurring groups.
+              WizFriends helps global teams, campus programs, and city partners turn strangers into recurring groups.
               AI-curated activities, endorsement workflows, and verified hosts—all in one modern web app experience.
             </motion.p>
             <motion.div
@@ -128,7 +128,7 @@ export default function LandingPage() {
               Everything you need to run real-world community programs.
             </h2>
             <p className="text-gray-600 text-lg">
-              HomeConnect is purpose-built for social discovery. We orchestrate event discovery, communal ideation,
+              WizFriends is purpose-built for social discovery. We orchestrate event discovery, communal ideation,
               and group continuity so you can focus on storytelling and safety.
             </p>
             <div className="space-y-4">
@@ -165,7 +165,7 @@ export default function LandingPage() {
             <div className="relative bg-white rounded-3xl shadow-2xl border border-white overflow-hidden">
               <Image
                 src="/pics/4.jpg"
-                alt="HomeConnect product preview"
+                alt="WizFriends product preview"
                 width={900}
                 height={600}
                 sizes="(max-width: 1024px) 100vw, 45vw"
@@ -181,9 +181,9 @@ export default function LandingPage() {
         <div className="max-w-6xl mx-auto px-6 lg:px-12">
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-10">
             <div className="max-w-xl space-y-4">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Teams trust HomeConnect with belonging.</h2>
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Teams trust WizFriends with belonging.</h2>
               <p className="text-gray-600">
-                From global mobility programs to university welcome centres, HomeConnect keeps communities lively and accountable.
+                From global mobility programs to university welcome centres, WizFriends keeps communities lively and accountable.
               </p>
             </div>
             <Link
@@ -220,6 +220,45 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Install Instructions */}
+      <section className="py-24 bg-white" id="install">
+        <div className="max-w-6xl mx-auto px-6 lg:px-12 space-y-12">
+          <div className="max-w-3xl space-y-4">
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900">Install WizFriends on your devices</h2>
+            <p className="text-lg text-gray-600">
+              WizFriends is a progressive web app, so you can add it to your home screen in just a few taps—no app store
+              submission needed. Follow the quick steps below to stay one tap away from your community.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8">
+            <div className="rounded-3xl border border-indigo-100 bg-indigo-50/50 p-8 shadow-sm">
+              <h3 className="text-xl font-semibold text-indigo-700 mb-4">iPhone &amp; iPad (Safari)</h3>
+              <ol className="space-y-3 text-gray-600 list-decimal list-inside">
+                <li>Open wizfriends.com in Safari.</li>
+                <li>Tap the <span className="font-medium">Share</span> icon.</li>
+                <li>Select <span className="font-medium">Add to Home Screen</span>, then tap <span className="font-medium">Add</span>.</li>
+              </ol>
+            </div>
+            <div className="rounded-3xl border border-pink-100 bg-pink-50/60 p-8 shadow-sm">
+              <h3 className="text-xl font-semibold text-pink-600 mb-4">Android (Chrome)</h3>
+              <ol className="space-y-3 text-gray-600 list-decimal list-inside">
+                <li>Open wizfriends.com in Chrome.</li>
+                <li>Tap the menu ••• in the top-right corner.</li>
+                <li>Choose <span className="font-medium">Install App</span> and confirm.</li>
+              </ol>
+            </div>
+            <div className="rounded-3xl border border-violet-100 bg-violet-50/60 p-8 shadow-sm">
+              <h3 className="text-xl font-semibold text-violet-700 mb-4">Desktop (Chrome / Edge)</h3>
+              <ol className="space-y-3 text-gray-600 list-decimal list-inside">
+                <li>Visit wizfriends.com in your browser.</li>
+                <li>Look for the <span className="font-medium">Install</span> icon in the address bar.</li>
+                <li>Click <span className="font-medium">Install</span> to pin WizFriends like a native app.</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Call to Action */}
       <section className="py-24 bg-indigo-900 text-white">
         <div className="max-w-6xl mx-auto px-6 lg:px-12 flex flex-col lg:flex-row items-center justify-between gap-10">
@@ -233,10 +272,10 @@ export default function LandingPage() {
                 href="/app"
                 className="inline-flex items-center justify-center bg-white text-indigo-900 font-semibold px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition"
               >
-                Open HomeConnect
+                Open WizFriends
               </Link>
               <Link
-                href="mailto:hello@homeconnect.app"
+                href="mailto:hello@wizfriends.app"
                 className="inline-flex items-center justify-center border border-white/60 text-white font-semibold px-8 py-3 rounded-full hover:bg-white hover:text-indigo-900 transition"
               >
                 Talk to an expert
