@@ -32,6 +32,11 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
+const legacyMatchers: string[] = Array.isArray(legacyConfig?.matcher) ? [...legacyConfig.matcher] : [];
+const matcher: string[] = legacyMatchers.includes("/api/:path*")
+  ? legacyMatchers
+  : [...legacyMatchers, "/api/:path*"];
+
 export const config = {
-  matcher: Array.from(new Set([...(legacyConfig?.matcher ?? []), "/api/:path*"])),
+  matcher,
 };
