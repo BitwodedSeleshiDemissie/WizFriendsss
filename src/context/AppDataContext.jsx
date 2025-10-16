@@ -172,6 +172,7 @@ export function AppDataProvider({ children }) {
         const ref = doc(db, "groups", group.id);
         batch.set(ref, {
           ...group,
+          isPublic: group.isPrivate === false,
           membersCount: group.membersCount ?? group.memberIds?.length ?? 1,
           memberIds: group.memberIds ?? [SEED_OWNER.id],
           adminIds: group.adminIds ?? [SEED_OWNER.id],
@@ -201,7 +202,7 @@ export function AppDataProvider({ children }) {
         });
       });
 
-      batch.set(doc(db, "users", SEED_OWNER.id), {
+      const seedProfile = {
         name: SEED_OWNER.name,
         tagline: SEED_OWNER.tagline,
         homeCity: SEED_OWNER.homeCity,
@@ -215,6 +216,16 @@ export function AppDataProvider({ children }) {
         createdAt: now,
         updatedAt: now,
         photoURL: "",
+        role: "admin",
+      };
+
+      batch.set(doc(db, "profiles", SEED_OWNER.id), seedProfile);
+      batch.set(doc(db, "users", SEED_OWNER.id), {
+        name: SEED_OWNER.name,
+        email: "",
+        role: "admin",
+        createdAt: now,
+        updatedAt: now,
       });
 
       await batch.commit();
@@ -349,23 +360,42 @@ export function AppDataProvider({ children }) {
     }
 
     setProfileLoading(true);
-    const profileRef = doc(db, "users", userId);
+    const profileRef = doc(db, "profiles", userId);
+    const userIndexRef = doc(db, "users", userId);
+    const ensureUserIndex = async (profileData) => {
+      try {
+        const payload = {
+          name: profileData?.name ?? profileFallback.name,
+          email: profileData?.email ?? profileFallback.email ?? "",
+          role: profileData?.role ?? "user",
+          updatedAt: serverTimestamp(),
+        };
+        if (!profileData?.createdAt) {
+          payload.createdAt = serverTimestamp();
+        }
+        await setDoc(userIndexRef, payload, { merge: true });
+      } catch {
+        // Swallow index sync issues; server will create if needed.
+      }
+    };
     const unsubscribe = onSnapshot(profileRef, async (snapshot) => {
       if (!snapshot.exists()) {
-        await setDoc(profileRef, {
-          ...buildDefaultProfile(user),
+        const defaultProfile = {
+          ...profileFallback,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-        });
+        };
+        await Promise.all([setDoc(profileRef, defaultProfile), ensureUserIndex(defaultProfile)]);
         return;
       }
       const data = snapshot.data();
       profilesCacheRef.current.set(userId, { id: userId, ...data });
       setProfileDoc(data);
       setProfileLoading(false);
+      await ensureUserIndex(data);
     });
     return () => unsubscribe();
-  }, [userId, user]);
+  }, [profileFallback, user, userId]);
 
   const categories = useMemo(() => {
     const unique = new Set(activities.map((activity) => activity.category));
@@ -447,7 +477,7 @@ export function AppDataProvider({ children }) {
         });
 
         await setDoc(
-          doc(db, "users", userId),
+          doc(db, "profiles", userId),
           {
             joinedActivities: arrayUnion(activityRef.id),
             savedActivities: arrayUnion(activityRef.id),
@@ -565,7 +595,7 @@ export function AppDataProvider({ children }) {
       await appendNotification("Idea approved", `${idea.title} is now live in Activities.`);
 
       await setDoc(
-        doc(db, "users", userId),
+        doc(db, "profiles", userId),
         {
           joinedActivities: arrayUnion(newActivityRef.id),
           updatedAt: serverTimestamp(),
@@ -674,6 +704,7 @@ export function AppDataProvider({ children }) {
           name: trimmedName,
           description: trimmedDescription,
           isPrivate,
+          isPublic: !isPrivate,
           tags: normalisedTags,
           membersCount: 1,
           memberIds: [userId],
@@ -689,7 +720,7 @@ export function AppDataProvider({ children }) {
         });
 
         await setDoc(
-          doc(db, "users", userId),
+          doc(db, "profiles", userId),
           {
             joinedGroups: arrayUnion(groupRef.id),
             updatedAt: serverTimestamp(),
@@ -995,7 +1026,7 @@ export function AppDataProvider({ children }) {
     if (missing.length > 0) {
       const fetched = await Promise.all(
         missing.map(async (memberId) => {
-          const snapshot = await getDoc(doc(db, "users", memberId));
+          const snapshot = await getDoc(doc(db, "profiles", memberId));
           if (!snapshot.exists()) return null;
           const profile = { id: memberId, ...snapshot.data() };
           cache.set(memberId, profile);

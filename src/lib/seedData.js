@@ -162,6 +162,7 @@ export const INITIAL_GROUPS = [
     cadence: "Weekly",
     tags: ["running", "outdoors", "wellness"],
     isPrivate: false,
+    isPublic: true,
     image: "/pics/7.jpg",
     photographer: null,
     photographerUrl: null,
@@ -179,6 +180,7 @@ export const INITIAL_GROUPS = [
     cadence: "Bi-weekly",
     tags: ["film", "food", "storytelling"],
     isPrivate: false,
+    isPublic: true,
     image: "/pics/5.jpg",
     photographer: null,
     photographerUrl: null,
@@ -196,6 +198,7 @@ export const INITIAL_GROUPS = [
     cadence: "Multi-week",
     tags: ["cowork", "professional", "remote"],
     isPrivate: true,
+    isPublic: false,
     image: "/pics/2.jpg",
     photographer: null,
     photographerUrl: null,
@@ -213,6 +216,7 @@ export const INITIAL_GROUPS = [
     cadence: "Monthly",
     tags: ["creativity", "wellness", "mindfulness"],
     isPrivate: false,
+    isPublic: true,
     image: "/pics/6.jpg",
     photographer: null,
     photographerUrl: null,
@@ -283,5 +287,6 @@ export function buildDefaultProfile(user) {
     savedActivities: [],
     joinedGroups: [],
     photoURL: user?.photoURL || "",
+    role: "user",
   };
 }
