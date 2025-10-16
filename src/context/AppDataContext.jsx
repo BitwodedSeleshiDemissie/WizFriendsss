@@ -94,6 +94,9 @@ export function AppDataProvider({ children }) {
   );
   const [notifications, setNotifications] = useState([]);
   const [profileDoc, setProfileDoc] = useState(null);
+  const [activityJoins, setActivityJoins] = useState([]);
+  const [activitySaves, setActivitySaves] = useState([]);
+  const [groupMemberships, setGroupMemberships] = useState([]);
 
   const [loadingActivities, setLoadingActivities] = useState(
     () => readCollectionCache(ACTIVITIES_CACHE_KEY, INITIAL_ACTIVITIES).length === 0
@@ -128,12 +131,28 @@ export function AppDataProvider({ children }) {
       id: userId,
       uid: userId,
       photoURL: profileDoc?.photoURL ?? profileFallback.photoURL,
+      joinedActivities,
+      savedActivities,
+      joinedGroups,
     };
-  }, [profileDoc, profileFallback, userId]);
+  }, [joinedActivities, joinedGroups, profileDoc, profileFallback, savedActivities, userId]);
 
-  const joinedActivities = userProfile.joinedActivities ?? [];
-  const savedActivities = userProfile.savedActivities ?? [];
-  const joinedGroups = userProfile.joinedGroups ?? [];
+  const joinedActivities = useMemo(
+    () =>
+      activityJoins
+        .filter((join) => join.status === "joined")
+        .map((join) => join.activityId),
+    [activityJoins]
+  );
+  const waitlistedActivities = useMemo(
+    () =>
+      activityJoins
+        .filter((join) => join.status === "waitlist")
+        .map((join) => join.activityId),
+    [activityJoins]
+  );
+  const savedActivities = useMemo(() => activitySaves.map((item) => item.activityId), [activitySaves]);
+  const joinedGroups = useMemo(() => groupMemberships.map((item) => item.groupId), [groupMemberships]);
 
   const seedDatabase = useCallback(async () => {
     try {
@@ -182,7 +201,7 @@ export function AppDataProvider({ children }) {
         });
       });
 
-      batch.set(doc(db, "profiles", SEED_OWNER.id), {
+      batch.set(doc(db, "users", SEED_OWNER.id), {
         name: SEED_OWNER.name,
         tagline: SEED_OWNER.tagline,
         homeCity: SEED_OWNER.homeCity,
@@ -276,13 +295,61 @@ export function AppDataProvider({ children }) {
 
   useEffect(() => {
     if (!userId) {
+      setActivityJoins([]);
+      return;
+    }
+    const joinsQuery = query(collection(db, "userActivityJoin"), where("userId", "==", userId));
+    const unsubscribe = onSnapshot(joinsQuery, (snapshot) => {
+      const docs = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      setActivityJoins(docs);
+    });
+    return () => unsubscribe();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setActivitySaves([]);
+      return;
+    }
+    const savesQuery = query(collection(db, "userActivitySave"), where("userId", "==", userId));
+    const unsubscribe = onSnapshot(savesQuery, (snapshot) => {
+      const docs = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      setActivitySaves(docs);
+    });
+    return () => unsubscribe();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setGroupMemberships([]);
+      return;
+    }
+    const membershipQuery = query(collection(db, "groupMembers"), where("userId", "==", userId));
+    const unsubscribe = onSnapshot(membershipQuery, (snapshot) => {
+      const docs = snapshot.docs.map((docSnap) => ({
+        id: docSnap.id,
+        ...docSnap.data(),
+      }));
+      setGroupMemberships(docs);
+    });
+    return () => unsubscribe();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
       setProfileDoc(null);
       setProfileLoading(false);
       return;
     }
 
     setProfileLoading(true);
-    const profileRef = doc(db, "profiles", userId);
+    const profileRef = doc(db, "users", userId);
     const unsubscribe = onSnapshot(profileRef, async (snapshot) => {
       if (!snapshot.exists()) {
         await setDoc(profileRef, {
@@ -380,7 +447,7 @@ export function AppDataProvider({ children }) {
         });
 
         await setDoc(
-          doc(db, "profiles", userId),
+          doc(db, "users", userId),
           {
             joinedActivities: arrayUnion(activityRef.id),
             savedActivities: arrayUnion(activityRef.id),
@@ -401,56 +468,75 @@ export function AppDataProvider({ children }) {
 
   const joinActivity = useCallback(
     async (activityId) => {
-      if (!userId) throw new Error("Please sign in first.");
+      if (!userId || !user) throw new Error("Please sign in first.");
       if (joinedActivities.includes(activityId)) return;
       setIsMutating(true);
       try {
-        const activityRef = doc(db, "activities", activityId);
-        const snapshot = await getDoc(activityRef);
-        if (!snapshot.exists()) return;
-        const data = snapshot.data();
-
-        await updateDoc(activityRef, {
-          attendees: increment(1),
+        const token = await user.getIdToken();
+        const response = await fetch(`/api/activities/${activityId}/join`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: "joined" }),
         });
 
-        await setDoc(
-          doc(db, "profiles", userId),
-          {
-            joinedActivities: arrayUnion(activityId),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
+        if (!response.ok) {
+          const error = await response.json().catch(() => null);
+          const message = error?.detail || error?.message || "Failed to join this activity.";
+          throw new Error(message);
+        }
 
-        await appendNotification("Activity joined", `You're confirmed for ${data.title}. See you there!`);
+        const result = await response.json().catch(() => null);
+        const status = result?.status ?? "joined";
+        const activity = activities.find((item) => item.id === activityId);
+
+        if (status === "waitlist") {
+          await appendNotification(
+            "Added to waitlist",
+            activity
+              ? `${activity.title} is full right now. We'll notify you if a spot opens.`
+              : "This activity is full right now. We'll notify you if a spot opens."
+          );
+        } else {
+          await appendNotification(
+            "Activity joined",
+            activity ? `You're confirmed for ${activity.title}. See you there!` : "You're confirmed. See you there!"
+          );
+        }
       } finally {
         setIsMutating(false);
       }
     },
-    [appendNotification, joinedActivities, userId]
+    [activities, appendNotification, joinedActivities, user, userId]
   );
 
   const toggleSaveActivity = useCallback(
     async (activityId) => {
-      if (!userId) throw new Error("Please sign in first.");
+      if (!userId || !user) throw new Error("Please sign in first.");
       const isSaved = savedActivities.includes(activityId);
       setIsMutating(true);
       try {
-        await setDoc(
-          doc(db, "profiles", userId),
-          {
-            savedActivities: isSaved ? arrayRemove(activityId) : arrayUnion(activityId),
-            favourites: isSaved ? arrayRemove(activityId) : arrayUnion(activityId),
-            updatedAt: serverTimestamp(),
+        const token = await user.getIdToken();
+        const response = await fetch(`/api/activities/${activityId}/save`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-          { merge: true }
-        );
+          body: JSON.stringify({ saved: !isSaved }),
+        });
+        if (!response.ok) {
+          const error = await response.json().catch(() => null);
+          const message = error?.detail || error?.message || "Failed to update saved activity.";
+          throw new Error(message);
+        }
       } finally {
         setIsMutating(false);
       }
     },
-    [savedActivities, userId]
+    [savedActivities, user, userId]
   );
 
   const promoteIdeaToActivity = useCallback(
@@ -479,7 +565,7 @@ export function AppDataProvider({ children }) {
       await appendNotification("Idea approved", `${idea.title} is now live in Activities.`);
 
       await setDoc(
-        doc(db, "profiles", userId),
+        doc(db, "users", userId),
         {
           joinedActivities: arrayUnion(newActivityRef.id),
           updatedAt: serverTimestamp(),
@@ -603,7 +689,7 @@ export function AppDataProvider({ children }) {
         });
 
         await setDoc(
-          doc(db, "profiles", userId),
+          doc(db, "users", userId),
           {
             joinedGroups: arrayUnion(groupRef.id),
             updatedAt: serverTimestamp(),
@@ -622,23 +708,25 @@ export function AppDataProvider({ children }) {
 
   const joinGroup = useCallback(
     async (groupId) => {
-      if (!userId) throw new Error("Please sign in first.");
+      if (!userId || !user) throw new Error("Please sign in first.");
       if (joinedGroups.includes(groupId)) return;
       setIsMutating(true);
       try {
-        const groupRef = doc(db, "groups", groupId);
-        await updateDoc(groupRef, {
-          membersCount: increment(1),
-          memberIds: arrayUnion(userId),
-        });
-        await setDoc(
-          doc(db, "profiles", userId),
-          {
-            joinedGroups: arrayUnion(groupId),
-            updatedAt: serverTimestamp(),
+        const token = await user.getIdToken();
+        const response = await fetch(`/api/groups/${groupId}/members`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
-          { merge: true }
-        );
+          body: JSON.stringify({}),
+        });
+
+        if (!response.ok) {
+          const error = await response.json().catch(() => null);
+          const message = error?.detail || error?.message || "Unable to join this group.";
+          throw new Error(message);
+        }
 
         setGroups((previous) =>
           previous.map((group) => {
@@ -674,39 +762,36 @@ export function AppDataProvider({ children }) {
           return next;
         });
 
-        const snapshot = await getDoc(groupRef);
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          await appendNotification("Group joined", `Welcome to ${data.name}!`);
+        const group = groups.find((item) => item.id === groupId);
+        if (group) {
+          await appendNotification("Group joined", `Welcome to ${group.name}!`);
         }
       } finally {
         setIsMutating(false);
       }
     },
-    [appendNotification, joinedGroups, setGroups, setProfileDoc, userId]
+    [appendNotification, groups, joinedGroups, setProfileDoc, user, userId]
   );
 
   const leaveGroup = useCallback(
     async (groupId) => {
-      if (!userId) throw new Error("Please sign in first.");
+      if (!userId || !user) throw new Error("Please sign in first.");
       if (!joinedGroups.includes(groupId)) return;
       setIsMutating(true);
       try {
-        const groupRef = doc(db, "groups", groupId);
-        await updateDoc(groupRef, {
-          membersCount: increment(-1),
-          memberIds: arrayRemove(userId),
-          adminIds: arrayRemove(userId),
+        const token = await user.getIdToken();
+        const response = await fetch(`/api/groups/${groupId}/members`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         });
 
-        await setDoc(
-          doc(db, "profiles", userId),
-          {
-            joinedGroups: arrayRemove(groupId),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
+        if (!response.ok) {
+          const error = await response.json().catch(() => null);
+          const message = error?.detail || error?.message || "Unable to leave this group.";
+          throw new Error(message);
+        }
 
         setGroups((previous) =>
           previous.map((group) => {
@@ -748,7 +833,7 @@ export function AppDataProvider({ children }) {
         setIsMutating(false);
       }
     },
-    [joinedGroups, setGroups, setProfileDoc, userId]
+    [joinedGroups, setProfileDoc, user, userId]
   );
 
   const promoteGroupMember = useCallback(
@@ -910,7 +995,7 @@ export function AppDataProvider({ children }) {
     if (missing.length > 0) {
       const fetched = await Promise.all(
         missing.map(async (memberId) => {
-          const snapshot = await getDoc(doc(db, "profiles", memberId));
+          const snapshot = await getDoc(doc(db, "users", memberId));
           if (!snapshot.exists()) return null;
           const profile = { id: memberId, ...snapshot.data() };
           cache.set(memberId, profile);
@@ -949,6 +1034,7 @@ export function AppDataProvider({ children }) {
       notifications,
       userProfile,
       joinedActivities,
+      waitlistedActivities,
       savedActivities,
       joinedGroups,
       createActivity,
@@ -994,6 +1080,7 @@ export function AppDataProvider({ children }) {
       joinActivity,
       joinGroup,
       joinedActivities,
+      waitlistedActivities,
       joinedGroups,
       leaveGroup,
       loading,

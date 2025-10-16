@@ -49,6 +49,7 @@ export default function ActivitiesNearMeTab() {
     activities,
     categories,
     joinedActivities,
+    waitlistedActivities,
     savedActivities,
     joinActivity,
     toggleSaveActivity,
@@ -169,6 +170,7 @@ export default function ActivitiesNearMeTab() {
       <div className="grid lg:grid-cols-2 gap-6">
         {nearbyActivities.map((activity, index) => {
           const joined = joinedActivities.includes(activity.id);
+          const waitlisted = waitlistedActivities.includes(activity.id);
           const saved = savedActivities.includes(activity.id);
           const eventDate = new Date(activity.dateTime);
 
@@ -218,17 +220,19 @@ export default function ActivitiesNearMeTab() {
 
               <div className="flex items-center gap-3">
                 <motion.button
-                  whileHover={{ scale: joined ? 1 : 1.03 }}
-                  whileTap={{ scale: joined ? 1 : 0.97 }}
+                  whileHover={{ scale: joined || waitlisted ? 1 : 1.03 }}
+                  whileTap={{ scale: joined || waitlisted ? 1 : 0.97 }}
                   onClick={() => joinActivity(activity.id)}
-                  disabled={joined}
+                  disabled={joined || waitlisted}
                   className={`flex-1 py-2.5 rounded-full text-sm font-semibold transition-all ${
                     joined
                       ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                      : waitlisted
+                      ? "bg-amber-100 text-amber-600 cursor-not-allowed"
                       : "bg-gradient-to-r from-indigo-600 to-pink-500 text-white shadow-lg hover:shadow-xl"
                   }`}
                 >
-                  {joined ? "Joined" : "Join activity"}
+                  {joined ? "Joined" : waitlisted ? "Waitlisted" : "Join activity"}
                 </motion.button>
 
                 <button

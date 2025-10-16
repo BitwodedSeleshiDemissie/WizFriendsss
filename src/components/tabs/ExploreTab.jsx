@@ -12,6 +12,7 @@ export default function ExploreTab() {
     joinActivity,
     toggleSaveActivity,
     joinedActivities,
+    waitlistedActivities,
     savedActivities,
     loadingActivities,
   } = useAppData();
@@ -90,6 +91,7 @@ export default function ExploreTab() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {featuredActivities.map((activity) => {
               const joined = joinedActivities.includes(activity.id);
+              const waitlisted = waitlistedActivities.includes(activity.id);
               const saved = savedActivities.includes(activity.id);
               const eventDate = new Date(activity.dateTime);
 
@@ -117,17 +119,19 @@ export default function ExploreTab() {
                   </div>
                   <div className="flex items-center gap-3">
                     <motion.button
-                      whileHover={{ scale: joined ? 1 : 1.03 }}
-                      whileTap={{ scale: joined ? 1 : 0.97 }}
-                      disabled={joined}
+                      whileHover={{ scale: joined || waitlisted ? 1 : 1.03 }}
+                      whileTap={{ scale: joined || waitlisted ? 1 : 0.97 }}
+                      disabled={joined || waitlisted}
                       onClick={() => joinActivity(activity.id)}
                       className={`flex-1 py-2.5 rounded-full text-sm font-semibold transition-all ${
                         joined
                           ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                          : waitlisted
+                          ? "bg-amber-100 text-amber-600 cursor-not-allowed"
                           : "bg-gradient-to-r from-indigo-600 to-pink-500 text-white shadow-md hover:shadow-lg"
                       }`}
                     >
-                      {joined ? "Joined" : "Join"}
+                      {joined ? "Joined" : waitlisted ? "Waitlisted" : "Join"}
                     </motion.button>
                     <button
                       onClick={() => toggleSaveActivity(activity.id)}
@@ -181,6 +185,7 @@ export default function ExploreTab() {
         <div className="space-y-4">
           {filteredActivities.map((activity) => {
             const joined = joinedActivities.includes(activity.id);
+            const waitlisted = waitlistedActivities.includes(activity.id);
             const saved = savedActivities.includes(activity.id);
             const eventDate = new Date(activity.dateTime);
             return (
@@ -213,26 +218,28 @@ export default function ExploreTab() {
                 </div>
 
                 <div className="flex items-center gap-4 mt-4">
-              <motion.button
-                whileHover={{ scale: joined ? 1 : 1.03 }}
-                whileTap={{ scale: joined ? 1 : 0.97 }}
-                disabled={joined}
-                onClick={() => joinActivity(activity.id)}
-                className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
-                  joined
-                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "bg-gradient-to-r from-indigo-600 to-pink-500 text-white shadow-md hover:shadow-lg"
-                }`}
+                  <motion.button
+                    whileHover={{ scale: joined || waitlisted ? 1 : 1.03 }}
+                    whileTap={{ scale: joined || waitlisted ? 1 : 0.97 }}
+                    disabled={joined || waitlisted}
+                    onClick={() => joinActivity(activity.id)}
+                    className={`px-5 py-2.5 rounded-full text-sm font-semibold transition-all ${
+                      joined
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : waitlisted
+                        ? "bg-amber-100 text-amber-600 cursor-not-allowed"
+                        : "bg-gradient-to-r from-indigo-600 to-pink-500 text-white shadow-md hover:shadow-lg"
+                    }`}
                   >
-                    {joined ? "Joined" : "Join"}
-              </motion.button>
-              <button
-                onClick={() => toggleSaveActivity(activity.id)}
-                className={`w-11 h-11 rounded-full border flex items-center justify-center transition ${
-                  saved
-                    ? "border-pink-500 text-pink-500 bg-pink-50"
-                    : "border-gray-200 text-gray-400 hover:text-pink-500 hover:border-pink-500"
-                }`}
+                    {joined ? "Joined" : waitlisted ? "Waitlisted" : "Join"}
+                  </motion.button>
+                  <button
+                    onClick={() => toggleSaveActivity(activity.id)}
+                    className={`w-11 h-11 rounded-full border flex items-center justify-center transition ${
+                      saved
+                        ? "border-pink-500 text-pink-500 bg-pink-50"
+                        : "border-gray-200 text-gray-400 hover:text-pink-500 hover:border-pink-500"
+                    }`}
                   >
                     {saved ? "♥" : "♡"}
                   </button>
