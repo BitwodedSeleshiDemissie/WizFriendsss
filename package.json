@@ -6,20 +6,32 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "emulate:functions": "cd functions && firebase emulators:start --only functions,firestore",
+    "deploy:functions": "cd functions && firebase deploy --only functions"
   },
   "dependencies": {
     "firebase": "^12.3.0",
+    "firebase-admin": "^12.7.0",
+    "firebase-functions": "^6.2.0",
     "framer-motion": "^12.23.22",
+    "geofire-common": "^5.2.0",
+    "jsonwebtoken": "^9.0.2",
     "next": "15.5.4",
     "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react-dom": "19.1.0",
+    "uuid": "^11.0.3",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/node": "^22.10.1",
+    "@types/react": "19.2.2",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
   }
 }
