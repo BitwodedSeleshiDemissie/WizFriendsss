@@ -117,6 +117,23 @@ export function AppDataProvider({ children }) {
 
   const profileFallback = useMemo(() => buildDefaultProfile(user), [user]);
 
+  const joinedActivities = useMemo(
+    () =>
+      activityJoins
+        .filter((join) => join.status === "joined")
+        .map((join) => join.activityId),
+    [activityJoins]
+  );
+  const waitlistedActivities = useMemo(
+    () =>
+      activityJoins
+        .filter((join) => join.status === "waitlist")
+        .map((join) => join.activityId),
+    [activityJoins]
+  );
+  const savedActivities = useMemo(() => activitySaves.map((item) => item.activityId), [activitySaves]);
+  const joinedGroups = useMemo(() => groupMemberships.map((item) => item.groupId), [groupMemberships]);
+
   const userProfile = useMemo(() => {
     if (!userId) {
       return {
@@ -136,23 +153,6 @@ export function AppDataProvider({ children }) {
       joinedGroups,
     };
   }, [joinedActivities, joinedGroups, profileDoc, profileFallback, savedActivities, userId]);
-
-  const joinedActivities = useMemo(
-    () =>
-      activityJoins
-        .filter((join) => join.status === "joined")
-        .map((join) => join.activityId),
-    [activityJoins]
-  );
-  const waitlistedActivities = useMemo(
-    () =>
-      activityJoins
-        .filter((join) => join.status === "waitlist")
-        .map((join) => join.activityId),
-    [activityJoins]
-  );
-  const savedActivities = useMemo(() => activitySaves.map((item) => item.activityId), [activitySaves]);
-  const joinedGroups = useMemo(() => groupMemberships.map((item) => item.groupId), [groupMemberships]);
 
   const seedDatabase = useCallback(async () => {
     try {
