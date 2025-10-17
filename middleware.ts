@@ -38,7 +38,6 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// ✅ Static matcher
 export const config = {
   matcher: [
     "/discover/:path*",
