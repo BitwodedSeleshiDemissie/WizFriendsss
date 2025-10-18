@@ -29,8 +29,7 @@ export default function ProfileTab() {
     savedActivities,
     notifications,
     loading,
-    ideas,
-    currentUserId,
+    ideaEndorsements,
   } = useAppData();
 
   const joined = useMemo(
@@ -51,10 +50,7 @@ export default function ProfileTab() {
     [groups, joinedGroups]
   );
 
-  const ideasEndorsed = useMemo(
-    () => ideas.filter((idea) => idea.supporters?.includes(currentUserId)).length,
-    [ideas, currentUserId]
-  );
+  const ideasEndorsed = useMemo(() => ideaEndorsements.length, [ideaEndorsements]);
 
   if (loading) {
     return (

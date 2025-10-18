@@ -97,6 +97,7 @@ export function AppDataProvider({ children }) {
   const [activityJoins, setActivityJoins] = useState([]);
   const [activitySaves, setActivitySaves] = useState([]);
   const [groupMemberships, setGroupMemberships] = useState([]);
+  const [ideaEndorsements, setIdeaEndorsements] = useState([]);
 
   const [loadingActivities, setLoadingActivities] = useState(
     () => readCollectionCache(ACTIVITIES_CACHE_KEY, INITIAL_ACTIVITIES).length === 0
@@ -153,6 +154,59 @@ export function AppDataProvider({ children }) {
       joinedGroups,
     };
   }, [joinedActivities, joinedGroups, profileDoc, profileFallback, savedActivities, userId]);
+
+  const apiFetch = useCallback(
+    async (path, { method = "GET", body, headers = {}, requireAuth = false } = {}) => {
+      const finalHeaders = new Headers(headers);
+      let finalBody = body;
+
+      if (body && typeof body === "object" && !(body instanceof FormData)) {
+        finalBody = JSON.stringify(body);
+      }
+
+      if (finalBody && !(finalBody instanceof FormData) && !finalHeaders.has("Content-Type")) {
+        finalHeaders.set("Content-Type", "application/json");
+      }
+
+      if (requireAuth) {
+        if (!user) {
+          throw new Error("Please sign in first.");
+        }
+        const token = await user.getIdToken();
+        finalHeaders.set("Authorization", `Bearer ${token}`);
+      }
+
+      const response = await fetch(path, {
+        method,
+        headers: finalHeaders,
+        body: finalBody,
+        credentials: "same-origin",
+      });
+
+      if (!response.ok) {
+        let message = response.statusText;
+        try {
+          const errorData = await response.json();
+          message = errorData?.detail || errorData?.message || message;
+        } catch {
+          // ignore JSON parsing errors
+        }
+        throw new Error(message || "Request failed");
+      }
+
+      if (response.status === 204) {
+        return null;
+      }
+
+      const contentType = response.headers.get("content-type");
+      if (contentType && contentType.includes("application/json")) {
+        return response.json();
+      }
+
+      return null;
+    },
+    [user]
+  );
 
   const seedDatabase = useCallback(async () => {
     try {
@@ -234,52 +288,178 @@ export function AppDataProvider({ children }) {
     }
   }, []);
 
-  useEffect(() => {
-    const activitiesQuery = query(collection(db, "activities"), orderBy("dateTime"));
-    const unsubscribe = onSnapshot(activitiesQuery, async (snapshot) => {
-      if (!seedAppliedRef.current && snapshot.empty) {
+  const fetchActivities = useCallback(async () => {
+    setLoadingActivities(true);
+    try {
+      let data = await apiFetch("/api/activities");
+      if ((!data || data.length === 0) && !seedAppliedRef.current) {
         seedAppliedRef.current = true;
         await seedDatabase();
+        data = await apiFetch("/api/activities");
+      }
+
+      if (!Array.isArray(data)) {
+        setActivities([]);
+        writeCollectionCache(ACTIVITIES_CACHE_KEY, []);
         return;
       }
-      const docs = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
-      setActivities(docs);
-      writeCollectionCache(ACTIVITIES_CACHE_KEY, docs);
+
+      const currentCity = userProfile.currentCity || "Cape Town";
+      const normalised = data.map((activity) => {
+        const startTime = activity.startTime || activity.dateTime || activity.createdAt || new Date().toISOString();
+        const endTime = activity.endTime || null;
+        const locationLabel =
+          activity.locationName ||
+          activity.address ||
+          (activity.city ? `${activity.city}${activity.address ? ` · ${activity.address}` : ""}` : "To be announced");
+
+        return {
+          id: activity.id,
+          title: activity.title ?? "Untitled activity",
+          description: activity.description ?? "",
+          category: activity.category ?? "Community",
+          dateTime: startTime,
+          endTime,
+          city: activity.city ?? null,
+          location: locationLabel,
+          host: activity.hostUserId ? "Community host" : activity.host ?? "Community host",
+          hostId: activity.hostUserId ?? null,
+          distance: activity.distanceKm ?? activity.distance ?? 0,
+          attendees: activity.attendeeCount ?? activity.joinedCount ?? activity.attendees ?? 0,
+          tags: activity.tags ?? [],
+          isNearby:
+            Boolean(activity.city) &&
+            Boolean(currentCity) &&
+            activity.city.toLowerCase() === currentCity.toLowerCase(),
+          featured: Boolean(activity.isFeatured),
+          isVirtual:
+            activity.visibility === "private"
+              ? false
+              : Boolean(activity.city) && activity.city.toLowerCase() === "remote",
+          visibility: activity.visibility ?? "public",
+          maxAttendees: activity.maxAttendees ?? null,
+        };
+      });
+
+      setActivities(normalised);
+      writeCollectionCache(ACTIVITIES_CACHE_KEY, normalised);
+    } catch (error) {
+      console.error("Failed to fetch activities", error);
+    } finally {
       setLoadingActivities(false);
-    });
-    return () => unsubscribe();
-  }, [seedDatabase]);
+    }
+  }, [apiFetch, seedDatabase, userProfile.currentCity]);
 
-  useEffect(() => {
-    const groupsQuery = query(collection(db, "groups"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(groupsQuery, (snapshot) => {
-      const docs = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
+  const fetchGroups = useCallback(async () => {
+    setLoadingGroups(true);
+    try {
+      let data = await apiFetch("/api/groups");
+      if ((!data || data.length === 0) && !seedAppliedRef.current) {
+        seedAppliedRef.current = true;
+        await seedDatabase();
+        data = await apiFetch("/api/groups");
+      }
+
+      if (!Array.isArray(data)) {
+        setGroups([]);
+        writeCollectionCache(GROUPS_CACHE_KEY, []);
+        return;
+      }
+
+      const normalised = data.map((group) => ({
+        id: group.id,
+        name: group.name ?? "Untitled group",
+        description: group.description ?? "",
+        city: group.city ?? userProfile.currentCity ?? "",
+        isPublic: group.isPublic ?? !group.isPrivate,
+        isPrivate: group.isPublic === false,
+        image: group.bannerUrl ?? group.image ?? DEFAULT_GROUP_IMAGE,
+        bannerUrl: group.bannerUrl ?? null,
+        photographer: group.photographer ?? null,
+        photographerUrl: group.photographerUrl ?? null,
+        membersCount: group.membersCount ?? 0,
+        memberIds: group.memberIds ?? [],
+        adminIds: group.adminIds ?? [],
+        ownerId: group.ownerId ?? group.createdBy ?? null,
+        tags: group.tags ?? [],
+        nextActivity: group.nextActivity ?? null,
+        cadence: group.cadence ?? null,
+        createdAt: group.createdAt ?? null,
+        updatedAt: group.updatedAt ?? null,
       }));
-      setGroups(docs);
-      writeCollectionCache(GROUPS_CACHE_KEY, docs);
+
+      setGroups(normalised);
+      writeCollectionCache(GROUPS_CACHE_KEY, normalised);
+    } catch (error) {
+      console.error("Failed to fetch groups", error);
+    } finally {
       setLoadingGroups(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    }
+  }, [apiFetch, seedDatabase, userProfile.currentCity]);
+
+  const fetchIdeas = useCallback(async () => {
+    setLoadingIdeas(true);
+    try {
+      let data = await apiFetch("/api/ideas");
+      if ((!data || data.length === 0) && !seedAppliedRef.current) {
+        seedAppliedRef.current = true;
+        await seedDatabase();
+        data = await apiFetch("/api/ideas");
+      }
+
+      if (!Array.isArray(data)) {
+        setIdeas([]);
+        writeCollectionCache(IDEAS_CACHE_KEY, []);
+        return;
+      }
+
+      const currentCity = userProfile.currentCity || "Cape Town";
+      const normalised = data.map((idea) => {
+        const endorsementCount = idea.endorsementCount ?? (Array.isArray(idea.supporters) ? idea.supporters.length : 0);
+        const proposedStart = idea.proposedTimeWindow?.start ?? idea.proposedStart ?? null;
+        const proposedEnd = idea.proposedTimeWindow?.end ?? idea.proposedEnd ?? null;
+        const preferredLocation = idea.preferredLocation ?? idea.city ?? "To be announced";
+
+        return {
+          id: idea.id,
+          title: idea.title ?? idea.promptText ?? "Community idea",
+          promptText: idea.promptText ?? "",
+          description: idea.aiSuggestion ?? idea.description ?? "",
+          city: idea.city ?? currentCity,
+          endorsementCount,
+          endorsementThreshold: idea.endorsementThreshold ?? ENDORSEMENT_THRESHOLD,
+          status: idea.status ?? "open",
+          tags: idea.tags ?? [],
+          supporters: idea.supporters ?? [],
+          preferredLocation,
+          proposedTimeWindow: idea.proposedTimeWindow ?? null,
+          proposedStart,
+          proposedEnd,
+          createdAt: idea.createdAt ?? null,
+          updatedAt: idea.updatedAt ?? null,
+        };
+      });
+
+      setIdeas(normalised);
+      writeCollectionCache(IDEAS_CACHE_KEY, normalised);
+    } catch (error) {
+      console.error("Failed to fetch ideas", error);
+    } finally {
+      setLoadingIdeas(false);
+    }
+  }, [apiFetch, seedDatabase, userProfile.currentCity]);
 
   useEffect(() => {
-    const ideasQuery = query(collection(db, "ideas"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(ideasQuery, (snapshot) => {
-      const docs = snapshot.docs.map((docSnap) => ({
-        id: docSnap.id,
-        ...docSnap.data(),
-      }));
-      setIdeas(docs);
-      writeCollectionCache(IDEAS_CACHE_KEY, docs);
-      setLoadingIdeas(false);
-    });
-    return () => unsubscribe();
-  }, []);
+    fetchActivities();
+  }, [fetchActivities]);
+
+  useEffect(() => {
+    fetchGroups();
+  }, [fetchGroups]);
+
+  useEffect(() => {
+    fetchIdeas();
+  }, [fetchIdeas]);
 
   useEffect(() => {
     if (!userId) {
@@ -348,6 +528,19 @@ export function AppDataProvider({ children }) {
         ...docSnap.data(),
       }));
       setGroupMemberships(docs);
+    });
+    return () => unsubscribe();
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) {
+      setIdeaEndorsements([]);
+      return;
+    }
+    const endorsementsQuery = query(collection(db, "ideaEndorse"), where("userId", "==", userId));
+    const unsubscribe = onSnapshot(endorsementsQuery, (snapshot) => {
+      const ids = snapshot.docs.map((docSnap) => docSnap.get("ideaId") || docSnap.id.split("_")[0]);
+      setIdeaEndorsements(ids);
     });
     return () => unsubscribe();
   }, [userId]);
@@ -441,86 +634,171 @@ export function AppDataProvider({ children }) {
       time,
       location,
       city,
-      distance,
-      isFeatured,
       isVirtual,
     }) => {
-      if (!userId) throw new Error("Please sign in to create activities.");
+      if (!user) throw new Error("Please sign in to create activities.");
       const trimmedTitle = title.trim();
       const trimmedDescription = description.trim();
       const trimmedLocation = location.trim();
       const trimmedCategory = category.trim();
 
-      if (!trimmedTitle || !trimmedDescription || !trimmedLocation || !trimmedCategory) {
+      if (!trimmedTitle || !trimmedDescription || !trimmedLocation) {
         throw new Error("Please complete all required fields.");
       }
 
       setIsMutating(true);
       try {
-        const dateTime = buildDateFromForm(date, time);
-        const activityRef = await addDoc(collection(db, "activities"), {
+        const startTimeIso = buildDateFromForm(date, time);
+        const startDate = new Date(startTimeIso);
+        if (Number.isNaN(startDate.getTime())) {
+          throw new Error("Please provide a valid date and time.");
+        }
+        const endDate = new Date(startDate.getTime() + 2 * 60 * 60 * 1000);
+
+        const payload = {
           title: trimmedTitle,
           description: trimmedDescription,
-          category: trimmedCategory,
-          dateTime,
-          location: trimmedLocation,
-          city: city || userProfile.currentCity || "Cape Town",
-          host: userProfile.name,
-          hostId: userId,
-          distance: Number(distance) || 5,
-          attendees: 1,
-          tags: [trimmedCategory.toLowerCase(), "community"],
-          isNearby: (city || userProfile.currentCity || "Cape Town") === userProfile.currentCity,
-          featured: Boolean(isFeatured),
-          isVirtual: Boolean(isVirtual),
-          createdAt: serverTimestamp(),
+          category: trimmedCategory || undefined,
+          startTime: startDate.toISOString(),
+          endTime: endDate.toISOString(),
+          city: city?.trim() || userProfile.currentCity || "Cape Town",
+          lat: 0,
+          lng: 0,
+          locationName: trimmedLocation || undefined,
+          address: trimmedLocation || undefined,
+          visibility: isVirtual ? "private" : "public",
+          hostGroupId: undefined,
+          maxAttendees: undefined,
+        };
+
+        const response = await apiFetch("/api/activities", {
+          method: "POST",
+          requireAuth: true,
+          body: payload,
         });
 
-        await setDoc(
-          doc(db, "profiles", userId),
-          {
-            joinedActivities: arrayUnion(activityRef.id),
-            savedActivities: arrayUnion(activityRef.id),
-            favourites: arrayUnion(activityRef.id),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
+        const newActivityId = response?.id ?? null;
 
+        if (newActivityId) {
+          try {
+            await apiFetch(`/api/activities/${newActivityId}/join`, {
+              method: "POST",
+              requireAuth: true,
+              body: { status: "joined" },
+            });
+          } catch (joinError) {
+            console.warn("Automatic activity join failed", joinError);
+          }
+        }
+
+        await fetchActivities();
         await appendNotification("Activity published", `${trimmedTitle} is now visible to the community.`);
-        return activityRef.id;
+        return newActivityId;
       } finally {
         setIsMutating(false);
       }
     },
-    [appendNotification, userId, userProfile]
+    [apiFetch, appendNotification, fetchActivities, user, userProfile.currentCity]
   );
 
   const joinActivity = useCallback(
     async (activityId) => {
       if (!userId || !user) throw new Error("Please sign in first.");
-      if (joinedActivities.includes(activityId)) return;
+      if (joinedActivities.includes(activityId) || waitlistedActivities.includes(activityId)) return;
       setIsMutating(true);
       try {
-        const token = await user.getIdToken();
-        const response = await fetch(`/api/activities/${activityId}/join`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ status: "joined" }),
-        });
+        const activity = activities.find((item) => item.id === activityId);
+        const activityTitle = activity?.title ?? "this activity";
 
-        if (!response.ok) {
-          const error = await response.json().catch(() => null);
-          const message = error?.detail || error?.message || "Failed to join this activity.";
-          throw new Error(message);
+        let status = "joined";
+        let usedFallback = false;
+        try {
+          const result = await apiFetch(`/api/activities/${activityId}/join`, {
+            method: "POST",
+            requireAuth: true,
+            body: { status: "joined" },
+          });
+          status = result?.status ?? "joined";
+        } catch (error) {
+          const message =
+            (error && typeof error === "object" && "message" in error && typeof error.message === "string"
+              ? error.message
+              : "") || "";
+          const allowFallback = message.toLowerCase().includes("failed");
+          if (!allowFallback) {
+            throw error instanceof Error
+              ? error
+              : new Error("We couldn't join this activity right now. Please try again.");
+          }
+
+          usedFallback = true;
+          try {
+            const maxAttendees =
+              activity && typeof activity.maxAttendees === "number" ? activity.maxAttendees : null;
+            const attendeeCount = activity && typeof activity.attendees === "number" ? activity.attendees : 0;
+            status =
+              maxAttendees && attendeeCount >= maxAttendees && !Number.isNaN(maxAttendees)
+                ? "waitlist"
+                : "joined";
+
+            await setDoc(
+              doc(db, "userActivityJoin", `${activityId}_${userId}`),
+              {
+                activityId,
+                userId,
+                status,
+                joinedAt: serverTimestamp(),
+              },
+              { merge: true }
+            );
+          } catch (fallbackError) {
+            console.error("Activity join fallback failed", fallbackError);
+            const fallbackMessage =
+              fallbackError instanceof Error && fallbackError.message
+                ? fallbackError.message
+                : "Unable to join this activity right now.";
+            throw new Error(fallbackMessage);
+          }
         }
 
-        const result = await response.json().catch(() => null);
-        const status = result?.status ?? "joined";
-        const activity = activities.find((item) => item.id === activityId);
+        setActivityJoins((previous) => {
+          const docId = `${activityId}_${userId}`;
+          const existingIndex = previous.findIndex((join) => join.id === docId);
+          const entry = {
+            id: docId,
+            activityId,
+            userId,
+            status,
+            joinedAt: new Date().toISOString(),
+          };
+          if (existingIndex >= 0) {
+            const copy = [...previous];
+            copy[existingIndex] = { ...copy[existingIndex], ...entry };
+            return copy;
+          }
+          return [...previous, entry];
+        });
+
+        if (usedFallback && status === "joined") {
+          setActivities((previous) =>
+            previous.map((item) => {
+              if (item.id !== activityId) return item;
+              const current = typeof item.attendees === "number" ? item.attendees : 0;
+              return {
+                ...item,
+                attendees: current + 1,
+              };
+            })
+          );
+        }
+
+        try {
+          await fetchActivities();
+        } catch (refreshError) {
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("Failed to refresh activities after join", refreshError);
+          }
+        }
 
         if (status === "waitlist") {
           await appendNotification(
@@ -532,14 +810,16 @@ export function AppDataProvider({ children }) {
         } else {
           await appendNotification(
             "Activity joined",
-            activity ? `You're confirmed for ${activity.title}. See you there!` : "You're confirmed. See you there!"
+            activity
+              ? `You're confirmed for ${activity.title}. See you there!`
+              : `You're confirmed for ${activityTitle}. See you there!`
           );
         }
       } finally {
         setIsMutating(false);
       }
     },
-    [activities, appendNotification, joinedActivities, user, userId]
+    [activities, apiFetch, appendNotification, fetchActivities, joinedActivities, user, userId, waitlistedActivities]
   );
 
   const toggleSaveActivity = useCallback(
@@ -548,25 +828,30 @@ export function AppDataProvider({ children }) {
       const isSaved = savedActivities.includes(activityId);
       setIsMutating(true);
       try {
-        const token = await user.getIdToken();
-        const response = await fetch(`/api/activities/${activityId}/save`, {
+        await apiFetch(`/api/activities/${activityId}/save`, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ saved: !isSaved }),
+          requireAuth: true,
+          body: { saved: !isSaved },
         });
-        if (!response.ok) {
-          const error = await response.json().catch(() => null);
-          const message = error?.detail || error?.message || "Failed to update saved activity.";
-          throw new Error(message);
-        }
+
+        setActivitySaves((previous) => {
+          const docId = `${activityId}_${userId}`;
+          if (isSaved) {
+            return previous.filter((doc) => doc.id !== docId);
+          }
+          const entry = {
+            id: docId,
+            activityId,
+            userId,
+            savedAt: new Date().toISOString(),
+          };
+          return [...previous, entry];
+        });
       } finally {
         setIsMutating(false);
       }
     },
-    [savedActivities, user, userId]
+    [apiFetch, savedActivities, user, userId]
   );
 
   const promoteIdeaToActivity = useCallback(
@@ -608,52 +893,98 @@ export function AppDataProvider({ children }) {
 
   const submitIdeaPrompt = useCallback(
     async (prompt) => {
-      if (!userId) throw new Error("Please sign in first.");
-      const suggestion = generateIdeaFromPrompt(prompt, userProfile.currentCity || "Cape Town");
-      await addDoc(collection(db, "ideas"), {
-        ...suggestion,
-        supporters: [userId],
-        status: "open",
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        createdById: userId,
-      });
+      if (!user) throw new Error("Please sign in first.");
+      const trimmedPrompt = prompt.trim();
+      if (!trimmedPrompt) {
+        throw new Error("Please describe your idea before submitting.");
+      }
 
-      await appendNotification("Idea published", `"${suggestion.title}" is live in Brainstorm.`);
+      setIsMutating(true);
+      try {
+        const suggestion = generateIdeaFromPrompt(trimmedPrompt, userProfile.currentCity || "Cape Town");
+        const proposedStart = createDateFromSuggestion(suggestion.suggestedTime);
+        const proposedEndDate = new Date(new Date(proposedStart).getTime() + 90 * 60 * 1000).toISOString();
+
+        const response = await apiFetch("/api/ideas", {
+          method: "POST",
+          requireAuth: true,
+          body: {
+            promptText: trimmedPrompt,
+            city: userProfile.currentCity || "Cape Town",
+            aiSuggestion: suggestion.description,
+            proposedStart,
+            proposedEnd: proposedEndDate,
+          },
+        });
+
+        const newIdeaId = response?.id ?? generateId();
+        setIdeas((previous) => [
+          {
+            id: newIdeaId,
+            title: suggestion.title,
+            promptText: trimmedPrompt,
+            description: suggestion.description,
+            city: userProfile.currentCity || "Cape Town",
+            endorsementCount: 0,
+            endorsementThreshold: ENDORSEMENT_THRESHOLD,
+            status: "open",
+            tags: suggestion.tags,
+            supporters: [userId ?? ""].filter(Boolean),
+            preferredLocation: suggestion.preferredLocation,
+            proposedTimeWindow: null,
+            proposedStart,
+            proposedEnd: proposedEndDate,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          },
+          ...previous,
+        ]);
+        setIdeaEndorsements((previous) => (userId ? [...previous, newIdeaId] : previous));
+
+        await fetchIdeas();
+        await appendNotification("Idea published", `"${suggestion.title}" is live in Brainstorm.`);
+      } finally {
+        setIsMutating(false);
+      }
     },
-    [appendNotification, userId, userProfile.currentCity]
+    [apiFetch, appendNotification, fetchIdeas, user, userId, userProfile.currentCity]
   );
 
   const endorseIdea = useCallback(
     async (ideaId) => {
-      if (!userId) throw new Error("Please sign in first.");
-      const ideaRef = doc(db, "ideas", ideaId);
-      const snapshot = await getDoc(ideaRef);
-      if (!snapshot.exists()) return;
-      const currentData = snapshot.data();
-      if (currentData.supporters?.includes(userId)) return;
-
-      await updateDoc(ideaRef, {
-        supporters: arrayUnion(userId),
-        updatedAt: serverTimestamp(),
-      });
-
-      const updatedSnapshot = await getDoc(ideaRef);
-      const updatedData = updatedSnapshot.data();
-      if (!updatedData) return;
-
-      const supporterCount = updatedData.supporters?.length ?? 0;
-      if (supporterCount >= ENDORSEMENT_THRESHOLD && updatedData.status !== "launched") {
-        await updateDoc(ideaRef, {
-          status: "launched",
-          launchedAt: serverTimestamp(),
+      if (!user) throw new Error("Please sign in first.");
+      setIsMutating(true);
+      try {
+        await apiFetch(`/api/ideas/${ideaId}/endorse`, {
+          method: "POST",
+          requireAuth: true,
         });
-        await promoteIdeaToActivity({ id: ideaId, ...updatedData });
-      } else if (supporterCount >= ENDORSEMENT_THRESHOLD - 1 && updatedData.status === "open") {
-        await updateDoc(ideaRef, { status: "ready" });
+        setIdeaEndorsements((previous) => (previous.includes(ideaId) ? previous : [...previous, ideaId]));
+        setIdeas((previous) =>
+          previous.map((idea) => {
+            if (idea.id !== ideaId) return idea;
+            const nextCount = (idea.endorsementCount ?? idea.supporters?.length ?? 0) + 1;
+            const supporters = Array.isArray(idea.supporters) ? [...idea.supporters] : [];
+            if (!supporters.includes(userId ?? "")) {
+              supporters.push(userId ?? "");
+            }
+            let status = idea.status;
+            if (nextCount >= (idea.endorsementThreshold ?? ENDORSEMENT_THRESHOLD)) {
+              status = status === "launched" ? status : "ready";
+            }
+            return {
+              ...idea,
+              endorsementCount: nextCount,
+              supporters,
+              status,
+            };
+          })
+        );
+      } finally {
+        setIsMutating(false);
       }
     },
-    [promoteIdeaToActivity, userId]
+    [apiFetch, user, userId]
   );
 
   const requestGroupImage = useCallback(async (queryTerm) => {
@@ -672,7 +1003,7 @@ export function AppDataProvider({ children }) {
 
   const createGroup = useCallback(
     async ({ name, description, isPrivate, tags, image }) => {
-      if (!userId) throw new Error("Please sign in first.");
+      if (!user) throw new Error("Please sign in first.");
       const trimmedName = name.trim();
       const trimmedDescription = description.trim();
       if (!trimmedName || !trimmedDescription) {
@@ -700,41 +1031,73 @@ export function AppDataProvider({ children }) {
           resolvedImage = DEFAULT_GROUP_IMAGE;
         }
 
-        const groupRef = await addDoc(collection(db, "groups"), {
-          name: trimmedName,
-          description: trimmedDescription,
-          isPrivate,
-          isPublic: !isPrivate,
-          tags: normalisedTags,
-          membersCount: 1,
-          memberIds: [userId],
-          adminIds: [userId],
-          ownerId: userId,
-          baseLocation: userProfile.currentCity || "Cape Town",
-          nextActivity: "TBD · coordinate with members",
-          cadence: "Flexible",
-          image: resolvedImage,
-          photographer,
-          photographerUrl,
-          createdAt: serverTimestamp(),
+        const bannerUrl = resolvedImage && /^https?:\/\//i.test(resolvedImage) ? resolvedImage : undefined;
+
+        const response = await apiFetch("/api/groups", {
+          method: "POST",
+          requireAuth: true,
+          body: {
+            name: trimmedName,
+            description: trimmedDescription,
+            city: userProfile.currentCity || "Cape Town",
+            isPublic: !isPrivate,
+            bannerUrl,
+          },
         });
 
-        await setDoc(
-          doc(db, "profiles", userId),
-          {
-            joinedGroups: arrayUnion(groupRef.id),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
+        const newGroupId = response?.id ?? null;
 
+        if (newGroupId) {
+          setGroupMemberships((previous) => {
+            const docId = `${newGroupId}_${userId}`;
+            if (previous.some((entry) => entry.id === docId)) {
+              return previous;
+            }
+            return [
+              ...previous,
+              {
+                id: docId,
+                groupId: newGroupId,
+                userId,
+                role: "owner",
+                joinedAt: new Date().toISOString(),
+              },
+            ];
+          });
+
+          setGroups((previous) => [
+            ...previous,
+            {
+              id: newGroupId,
+              name: trimmedName,
+              description: trimmedDescription,
+              city: userProfile.currentCity || "Cape Town",
+              isPublic: !isPrivate,
+              isPrivate,
+              image: resolvedImage || DEFAULT_GROUP_IMAGE,
+              membersCount: 1,
+              memberIds: [userId],
+              adminIds: [userId],
+              ownerId: userId,
+              tags: normalisedTags,
+              nextActivity: "TBD · coordinate with members",
+              cadence: "Flexible",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              photographer,
+              photographerUrl,
+            },
+          ]);
+        }
+
+        await fetchGroups();
         await appendNotification("Group created", `${trimmedName} is ready. Invite members to join.`);
-        return groupRef.id;
+        return newGroupId;
       } finally {
         setIsMutating(false);
       }
     },
-    [appendNotification, requestGroupImage, userId, userProfile.currentCity]
+    [apiFetch, appendNotification, fetchGroups, requestGroupImage, user, userId, userProfile.currentCity]
   );
 
   const joinGroup = useCallback(
@@ -743,57 +1106,90 @@ export function AppDataProvider({ children }) {
       if (joinedGroups.includes(groupId)) return;
       setIsMutating(true);
       try {
-        const token = await user.getIdToken();
-        const response = await fetch(`/api/groups/${groupId}/members`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({}),
-        });
-
-        if (!response.ok) {
-          const error = await response.json().catch(() => null);
-          const message = error?.detail || error?.message || "Unable to join this group.";
-          throw new Error(message);
+        const group = groups.find((item) => item.id === groupId);
+        if (!group) {
+          throw new Error("Group not found.");
         }
 
-        setGroups((previous) =>
-          previous.map((group) => {
-            if (group.id !== groupId) return group;
-            const memberIds = Array.isArray(group.memberIds) ? group.memberIds : [];
-            const alreadyMember = memberIds.includes(userId);
-            const nextMemberIds = alreadyMember ? memberIds : [...memberIds, userId];
-            const nextMembersCount = Math.max(
-              (group.membersCount ?? memberIds.length) + (alreadyMember ? 0 : 1),
-              nextMemberIds.length
+        let usedFallback = false;
+        try {
+          await apiFetch(`/api/groups/${groupId}/members`, {
+            method: "POST",
+            requireAuth: true,
+            body: {},
+          });
+        } catch (error) {
+          const message =
+            (error && typeof error === "object" && "message" in error && typeof error.message === "string"
+              ? error.message
+              : "") || "";
+          const allowFallback = message.toLowerCase().includes("failed");
+          if (!allowFallback) {
+            throw error instanceof Error
+              ? error
+              : new Error("We couldn't join this group right now. Please try again.");
+          }
+
+          usedFallback = true;
+          try {
+            await setDoc(
+              doc(db, "groupMembers", `${groupId}_${userId}`),
+              {
+                groupId,
+                userId,
+                role: "member",
+                joinedAt: serverTimestamp(),
+              },
+              { merge: true }
             );
+          } catch (fallbackError) {
+            console.error("Group join fallback failed", fallbackError);
+            const fallbackMessage =
+              fallbackError instanceof Error && fallbackError.message
+                ? fallbackError.message
+                : "Unable to join this group right now.";
+            throw new Error(fallbackMessage);
+          }
+        }
+
+        setGroupMemberships((previous) => {
+          const docId = `${groupId}_${userId}`;
+          if (previous.some((entry) => entry.id === docId)) {
+            return previous;
+          }
+          return [
+            ...previous,
+            {
+              id: docId,
+              groupId,
+              userId,
+              role: "member",
+              joinedAt: new Date().toISOString(),
+            },
+          ];
+        });
+
+        setGroups((previous) =>
+          previous.map((existing) => {
+            if (existing.id !== groupId) return existing;
+            const memberIds = Array.isArray(existing.memberIds) ? existing.memberIds : [];
+            const alreadyMember = memberIds.includes(userId);
             return {
-              ...group,
-              membersCount: nextMembersCount,
-              memberIds: nextMemberIds,
+              ...existing,
+              memberIds: alreadyMember ? memberIds : [...memberIds, userId],
+              membersCount: (existing.membersCount ?? memberIds.length) + (alreadyMember ? 0 : 1),
             };
           })
         );
 
-        setProfileDoc((previous) => {
-          const base = previous ?? {};
-          const existing = Array.isArray(base.joinedGroups) ? base.joinedGroups : [];
-          if (existing.includes(groupId)) return base;
-          const next = {
-            ...base,
-            id: userId,
-            joinedGroups: [...existing, groupId],
-          };
-          if (userId) {
-            const cached = profilesCacheRef.current.get(userId) ?? {};
-            profilesCacheRef.current.set(userId, { ...cached, ...next, id: userId });
+        try {
+          await fetchGroups();
+        } catch (refreshError) {
+          if (process.env.NODE_ENV !== "production") {
+            console.warn("Failed to refresh groups after join", refreshError);
           }
-          return next;
-        });
+        }
 
-        const group = groups.find((item) => item.id === groupId);
         if (group) {
           await appendNotification("Group joined", `Welcome to ${group.name}!`);
         }
@@ -801,7 +1197,7 @@ export function AppDataProvider({ children }) {
         setIsMutating(false);
       }
     },
-    [appendNotification, groups, joinedGroups, setProfileDoc, user, userId]
+    [apiFetch, appendNotification, fetchGroups, groups, joinedGroups, user, userId]
   );
 
   const leaveGroup = useCallback(
@@ -810,61 +1206,33 @@ export function AppDataProvider({ children }) {
       if (!joinedGroups.includes(groupId)) return;
       setIsMutating(true);
       try {
-        const token = await user.getIdToken();
-        const response = await fetch(`/api/groups/${groupId}/members`, {
+        await apiFetch(`/api/groups/${groupId}/members`, {
           method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+          requireAuth: true,
         });
 
-        if (!response.ok) {
-          const error = await response.json().catch(() => null);
-          const message = error?.detail || error?.message || "Unable to leave this group.";
-          throw new Error(message);
-        }
-
+        setGroupMemberships((previous) => previous.filter((entry) => !(entry.groupId === groupId && entry.userId === userId)));
         setGroups((previous) =>
           previous.map((group) => {
             if (group.id !== groupId) return group;
             const memberIds = Array.isArray(group.memberIds) ? group.memberIds : [];
             if (!memberIds.includes(userId)) return group;
             const nextMemberIds = memberIds.filter((id) => id !== userId);
-            const nextMembersCount = Math.max(
-              (group.membersCount ?? memberIds.length) - 1,
-              nextMemberIds.length
-            );
             return {
               ...group,
-              membersCount: nextMembersCount,
               memberIds: nextMemberIds,
-              adminIds: Array.isArray(group.adminIds)
-                ? group.adminIds.filter((id) => id !== userId)
-                : group.adminIds,
+              membersCount: Math.max((group.membersCount ?? memberIds.length) - 1, nextMemberIds.length),
+              adminIds: Array.isArray(group.adminIds) ? group.adminIds.filter((id) => id !== userId) : group.adminIds,
             };
           })
         );
 
-        setProfileDoc((previous) => {
-          const base = previous ?? {};
-          const existing = Array.isArray(base.joinedGroups) ? base.joinedGroups : [];
-          if (!existing.includes(groupId)) return base;
-          const next = {
-            ...base,
-            id: userId,
-            joinedGroups: existing.filter((id) => id !== groupId),
-          };
-          if (userId) {
-            const cached = profilesCacheRef.current.get(userId) ?? {};
-            profilesCacheRef.current.set(userId, { ...cached, ...next, id: userId });
-          }
-          return next;
-        });
+        await fetchGroups();
       } finally {
         setIsMutating(false);
       }
     },
-    [joinedGroups, setProfileDoc, user, userId]
+    [apiFetch, fetchGroups, joinedGroups, user, userId]
   );
 
   const promoteGroupMember = useCallback(
@@ -1068,6 +1436,7 @@ export function AppDataProvider({ children }) {
       waitlistedActivities,
       savedActivities,
       joinedGroups,
+      ideaEndorsements,
       createActivity,
       joinActivity,
       toggleSaveActivity,
@@ -1107,6 +1476,7 @@ export function AppDataProvider({ children }) {
       fetchGroupProfiles,
       groups,
       ideas,
+      ideaEndorsements,
       isMutating,
       joinActivity,
       joinGroup,

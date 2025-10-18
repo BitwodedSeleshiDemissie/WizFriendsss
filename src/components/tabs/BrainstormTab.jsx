@@ -8,8 +8,8 @@ export default function BrainstormTab({ onCreateActivity }) {
     ideas,
     endorseIdea,
     endorsementThreshold,
-    currentUserId,
     loadingIdeas,
+    ideaEndorsements,
   } = useAppData();
 
   const handleCreateClick = () => {
@@ -49,14 +49,31 @@ export default function BrainstormTab({ onCreateActivity }) {
 
       <div className="space-y-6">
         {ideas.map((idea) => {
-          const hasEndorsed = idea.supporters.includes(currentUserId);
-          const progress = Math.min(idea.supporters.length / endorsementThreshold, 1);
+          const supporterCount = idea.endorsementCount ?? (Array.isArray(idea.supporters) ? idea.supporters.length : 0);
+          const targetThreshold = idea.endorsementThreshold ?? endorsementThreshold;
+          const progress = targetThreshold > 0 ? Math.min(supporterCount / targetThreshold, 1) : 0;
+          const hasEndorsed = ideaEndorsements.includes(idea.id);
           const statusColor =
             idea.status === "launched"
               ? "text-emerald-600 bg-emerald-50"
               : idea.status === "ready"
               ? "text-indigo-600 bg-indigo-50"
               : "text-gray-600 bg-gray-100";
+
+          const suggestedTime = idea.suggestedTime
+            ? idea.suggestedTime
+            : idea.proposedStart
+            ? new Date(idea.proposedStart).toLocaleString(undefined, {
+                month: "short",
+                day: "numeric",
+                hour: "numeric",
+                minute: "2-digit",
+              })
+            : "TBD";
+
+          const preferredLocation = idea.preferredLocation || idea.city || "To be announced";
+          const tags = Array.isArray(idea.tags) ? idea.tags : [];
+          const categoryLabel = idea.category || "Community";
 
           return (
             <motion.div
@@ -80,9 +97,9 @@ export default function BrainstormTab({ onCreateActivity }) {
                   <p className="text-sm text-gray-600 mt-2">{idea.description}</p>
                   <div className="flex flex-wrap gap-2 mt-3 text-xs text-gray-500">
                     <span className="bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full">
-                      {idea.category}
+                      {categoryLabel}
                     </span>
-                    {idea.tags.map((tag) => (
+                    {tags.map((tag) => (
                       <span key={tag} className="bg-gray-100 px-3 py-1 rounded-full">
                         #{tag}
                       </span>
@@ -91,7 +108,7 @@ export default function BrainstormTab({ onCreateActivity }) {
                 </div>
                 <div className="w-full md:w-60 bg-indigo-50/60 border border-indigo-100 rounded-3xl p-4 space-y-2">
                   <p className="text-sm font-semibold text-indigo-600">
-                    {idea.supporters.length} / {endorsementThreshold} endorsements
+                    {supporterCount} / {targetThreshold} endorsements
                   </p>
                   <div className="h-2 bg-white rounded-full overflow-hidden">
                     <div
@@ -100,7 +117,7 @@ export default function BrainstormTab({ onCreateActivity }) {
                     />
                   </div>
                   <p className="text-xs text-gray-500">
-                    Suggested timing: {idea.suggestedTime} • preferred spot: {idea.preferredLocation}
+                    Suggested timing: {suggestedTime} • preferred spot: {preferredLocation}
                   </p>
                 </div>
               </div>
@@ -120,7 +137,7 @@ export default function BrainstormTab({ onCreateActivity }) {
                   {hasEndorsed ? "You endorsed this" : "Endorse idea"}
                 </motion.button>
                 <span className="text-sm text-gray-500">
-                  Supporters: {idea.supporters.length === 0 ? "be the first!" : idea.supporters.join(", ")}
+                  Supporters: {supporterCount === 0 ? "be the first!" : supporterCount}
                 </span>
               </div>
             </motion.div>
