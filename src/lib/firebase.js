@@ -1,8 +1,12 @@
 // /lib/firebase.js
 import { initializeApp, getApps, getApp } from "firebase/app";
-// Add other Firebase services you use, e.g., getAuth, getFirestore
-import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import {
+  getAuth,
+  GoogleAuthProvider,
+  setPersistence,
+  browserLocalPersistence,
+} from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -18,6 +22,15 @@ const firebaseConfig = {
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
 export const auth = getAuth(app);
+export const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: "select_account" });
 export const db = getFirestore(app); // Export Firestore instance if used client-side
+
+// Persist the session so protected API calls keep working across reloads
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.warn("Falling back to in-memory auth state; persistence is unavailable.", error);
+  }
+});
 
 export default app; // Export the app instance
