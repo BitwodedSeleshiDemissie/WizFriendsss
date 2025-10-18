@@ -1,4 +1,8 @@
 // /lib/firebase.js
+// /lib/firebase.ts
+import { initializeApp, getApps, getApp } from 'firebase/app';
+// Import necessary Firebase services
+import { getAuth, GoogleAuthProvider } from
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import {
