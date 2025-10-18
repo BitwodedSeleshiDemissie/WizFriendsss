@@ -1,25 +1,25 @@
-// /lib/firebaseAdmin.ts (or wherever your file is)
-import admin from "firebase-admin";
-import { cert } from "firebase-admin/app"; // Import cert
+// /lib/firebaseAdmin.ts
+import admin from 'firebase-admin';
+import { cert, getApps } from 'firebase-admin/app';
 
-// Check if Firebase Admin SDK is already initialized
-if (!admin.apps.length) {
-  // Initialize using the Vercel environment variables
+// Prevent re-initialization in serverless environments
+if (!getApps().length) {
   admin.initializeApp({
+    // Use cert() with environment variables for Vercel
     credential: cert({
       projectId: process.env.FIREBASE_PROJECT_ID,
       clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Make sure to replace the escaped newlines from the env var
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      // Ensure the private key's newlines are correctly formatted
+      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     }),
-    // You usually don't need storageBucket here unless using specific Admin Storage features
-    // storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
   });
+  console.log('Firebase Admin SDK Initialized'); // Log for confirmation
+} else {
+  // console.log('Firebase Admin SDK already initialized'); // Optional: Log if already initialized
 }
 
-// Export the initialized services
-export const adminDb = admin.firestore();
 export const adminAuth = admin.auth();
-export const adminMessaging = admin.messaging();
+export const adminDb = admin.firestore();
+export const adminMessaging = admin.messaging(); // If you use it
 
-export default admin; // Export the admin instance itself if needed elsewhere
+export default admin; // Export the main admin instance if needed elsewheref
