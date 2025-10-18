@@ -79,7 +79,7 @@ export default function NewActivityPage() {
           Got an idea for an event? Submit it below and get 3 people to vouch for it to make it live.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 text-black">
           <input
             type="text"
             name="title"

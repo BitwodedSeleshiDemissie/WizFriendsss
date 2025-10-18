@@ -4,6 +4,7 @@ import { Suspense, useMemo } from "react";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
+import Image from "next/image";
 
 function AboutPageContent() {
   const { user, loading } = useAuth();
@@ -105,10 +106,12 @@ function AboutPageContent() {
           transition={{ duration: 0.7 }}
           className="relative rounded-3xl overflow-hidden shadow-2xl"
         >
-          <img
+          <Image
             src="/pics/com.jpg"
             alt="People building community"
             className="w-full h-full object-cover"
+            width={400}
+            height={400}
           />
           <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/30 to-pink-500/20" />
         </motion.div>
