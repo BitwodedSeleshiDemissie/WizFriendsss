@@ -1,8 +1,27 @@
 "use client";
 
+import { Suspense, useMemo } from "react";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
+import { useAuth } from "@/context/AuthContext";
+import Image from "next/image";
 
-export default function AboutPage() {
+function AboutPageContent() {
+  const { user, loading } = useAuth();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const router = useRouter();
+
+  const redirectTo = useMemo(() => {
+    if (!pathname) return "/app";
+    const query = searchParams?.toString();
+    return query ? `${pathname}?${query}` : pathname;
+  }, [pathname, searchParams]);
+
+  const handleJoinClick = () => {
+    router.push(`/auth/login?redirect=${encodeURIComponent(redirectTo)}`);
+  };
+
   return (
     <main className="min-h-screen bg-gradient-to-b from-white via-indigo-50 to-purple-100 text-gray-800 font-body">
       {/* Hero Section */}
@@ -33,7 +52,7 @@ export default function AboutPage() {
             transition={{ duration: 1, delay: 0.3 }}
             className="mt-8 text-lg md:text-xl leading-relaxed text-gray-700"
           >
-            <span className="font-semibold text-indigo-600">HomeConnect</span> 
+            <span className="font-semibold text-indigo-600">WizFriends</span> 
             was born from a feeling shared by millions — the ache of being far 
             from home, searching for belonging in an unfamiliar place. Whether 
             you’re an international student, a young professional, or simply 
@@ -75,7 +94,7 @@ export default function AboutPage() {
           </p>
           <p className="text-gray-700 leading-relaxed text-lg">
             That’s why we’re building{" "}
-            <span className="font-semibold text-indigo-600">HomeConnect</span>: 
+            <span className="font-semibold text-indigo-600">WizFriends</span>: 
             a place where every new city can feel like home — through shared 
             passions, meaningful experiences, and the people who make it all matter.
           </p>
@@ -87,10 +106,12 @@ export default function AboutPage() {
           transition={{ duration: 0.7 }}
           className="relative rounded-3xl overflow-hidden shadow-2xl"
         >
-          <img
+          <Image
             src="/pics/com.jpg"
             alt="People building community"
             className="w-full h-full object-cover"
+            width={400}
+            height={400}
           />
           <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/30 to-pink-500/20" />
         </motion.div>
@@ -115,22 +136,38 @@ export default function AboutPage() {
         >
           We exist to help people rediscover belonging — by connecting them 
           through shared interests, authentic communities, and real human 
-          stories. HomeConnect isn’t just an app — it’s a movement toward a 
+          stories. WizFriends isn’t just an app — it’s a movement toward a 
           more connected, compassionate world.
         </motion.p>
       </section>
 
       {/* CTA Section */}
       <section className="py-24 text-center">
-        <motion.a
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          href="/join"
-          className="inline-block bg-gradient-to-r from-indigo-600 to-pink-500 text-white text-lg font-semibold py-4 px-10 rounded-full shadow-xl hover:shadow-2xl transition-all"
-        >
-          Join the Movement
-        </motion.a>
+        {!loading && !user && (
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={handleJoinClick}
+            className="inline-block bg-gradient-to-r from-indigo-600 to-pink-500 text-white text-lg font-semibold py-4 px-10 rounded-full shadow-xl hover:shadow-2xl transition-all"
+          >
+            Join the Movement
+          </motion.button>
+        )}
       </section>
     </main>
+  );
+}
+
+export default function AboutPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white via-indigo-50 to-purple-100 text-gray-600">
+          <p className="text-sm font-semibold text-indigo-500">Loading our story…</p>
+        </main>
+      }
+    >
+      <AboutPageContent />
+    </Suspense>
   );
 }

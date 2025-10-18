@@ -10,8 +10,8 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // ✅ Listen to Firebase user state globally
   useEffect(() => {
-    // Listen to Firebase user state once globally
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
@@ -20,12 +20,13 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
+  // ✅ Keep auth cookie in sync for middleware / server routes
   useEffect(() => {
     if (loading) return;
 
-    // Ensure the middleware can recognise authenticated users
     const syncAuthCookie = async () => {
       if (!user) {
+        // Clear cookie if logged out
         if (typeof document !== "undefined") {
           document.cookie = "authToken=; path=/; max-age=0";
         }
@@ -45,6 +46,7 @@ export function AuthProvider({ children }) {
     syncAuthCookie();
   }, [user, loading]);
 
+  // ✅ Logout handler
   const logout = async () => {
     await signOut(auth);
     setUser(null);

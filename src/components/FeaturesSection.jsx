@@ -19,7 +19,7 @@ export default function FeaturesSection() {
           viewport={{ once: true }}
           transition={{ duration: 0.8 }}
         >
-          What Makes HomeConnect Special
+          What Makes WizFriends Special
         </motion.h2>
         <div className="grid sm:grid-cols-3 gap-10">
           {features.map((f, i) => (

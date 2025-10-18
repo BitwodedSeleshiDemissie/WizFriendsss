@@ -19,9 +19,10 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { label: "Discover", href: "/discover" },
-    { label: "Communities", href: "/auth/login" },
-    { label: "Events", href: "/auth/login" },
+    { label: "Product", href: "/#product" },
+    { label: "Experience", href: "/app" },
+    { label: "Brainstorm", href: "/app?tab=brainstorm" },
+    { label: "Groups", href: "/app?tab=groups" },
     { label: "About", href: "/about" },
   ];
 
@@ -43,7 +44,7 @@ export default function Navbar() {
             whileHover={{ scale: 1.05 }}
             className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent cursor-pointer"
           >
-            HomeConnect
+            WizFriends
           </motion.h1>
         </Link>
 
