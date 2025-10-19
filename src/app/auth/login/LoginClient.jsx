@@ -26,6 +26,10 @@ export default function LoginClient({ redirectTo }) {
   }
 
   const handleGoogleLogin = async () => {
+    if (!auth || !provider) {
+      setErrorMessage("Firebase is not available. Please refresh the page and try again.");
+      return;
+    }
     setErrorMessage(null);
     setLoading(true);
     let resetLoader = true;

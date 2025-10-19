@@ -20,16 +20,20 @@ const firebaseConfig = {
 // Initialize Firebase for the client (prevent re-initialization)
 const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
 
-export const auth = getAuth(app);
-export const provider = new GoogleAuthProvider();
-provider.setCustomParameters({ prompt: "select_account" });
+export const auth = typeof window !== "undefined" ? getAuth(app) : null;
+export const provider = typeof window !== "undefined" ? new GoogleAuthProvider() : null;
+if (provider) {
+  provider.setCustomParameters({ prompt: "select_account" });
+}
 export const db = getFirestore(app); // Export Firestore instance if used client-side
 
 // Persist the session so protected API calls keep working across reloads
-setPersistence(auth, browserLocalPersistence).catch((error) => {
-  if (process.env.NODE_ENV !== "production") {
-    console.warn("Falling back to in-memory auth state; persistence is unavailable.", error);
-  }
-});
+if (auth) {
+  setPersistence(auth, browserLocalPersistence).catch((error) => {
+    if (process.env.NODE_ENV !== "production") {
+      console.warn("Falling back to in-memory auth state; persistence is unavailable.", error);
+    }
+  });
+}
 
 export default app; // Export the app instance

@@ -12,6 +12,11 @@ export function AuthProvider({ children }) {
 
   // ✅ Listen to Firebase user state globally
   useEffect(() => {
+    if (!auth) {
+      setLoading(false);
+      return undefined;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
@@ -48,7 +53,9 @@ export function AuthProvider({ children }) {
 
   // ✅ Logout handler
   const logout = async () => {
-    await signOut(auth);
+    if (auth) {
+      await signOut(auth);
+    }
     setUser(null);
     if (typeof document !== "undefined") {
       document.cookie = "authToken=; path=/; max-age=0";
