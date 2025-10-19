@@ -1,4 +1,4 @@
-import type { GeoPoint, Timestamp } from "firebase-admin/firestore";
+import type { GeoPoint, Timestamp } from "firebase/firestore";
 
 export type AppRole = "user" | "moderator" | "customer_service" | "admin";
 
