@@ -1,25 +1,54 @@
 // /lib/firebaseAdmin.ts
-import admin from "firebase-admin";
+import admin, { ServiceAccount } from "firebase-admin";
 import { cert, getApps } from "firebase-admin/app";
+
+type ServiceAccountJson = {
+  project_id?: string;
+  client_email?: string;
+  private_key?: string;
+};
+
+const serviceAccountEnv = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
 // Prevent re-initialization in serverless environments
 if (!getApps().length) {
+  if (!serviceAccountEnv) {
+    throw new Error(
+      "FIREBASE_SERVICE_ACCOUNT_KEY is not set. Add the service account JSON to your environment.",
+    );
+  }
+
+  let serviceAccountJson: ServiceAccountJson;
+
+  try {
+    serviceAccountJson = JSON.parse(serviceAccountEnv) as ServiceAccountJson;
+  } catch {
+    throw new Error(
+      "FIREBASE_SERVICE_ACCOUNT_KEY must be valid JSON. Ensure the value is a stringified service account.",
+    );
+  }
+
+  const { project_id, client_email, private_key } = serviceAccountJson;
+
+  if (!project_id || !client_email || !private_key) {
+    throw new Error(
+      "FIREBASE_SERVICE_ACCOUNT_KEY is missing required fields (project_id, client_email, private_key).",
+    );
+  }
+
+  const serviceAccount: ServiceAccount = {
+    projectId: project_id,
+    clientEmail: client_email,
+    privateKey: private_key,
+  };
+
   admin.initializeApp({
-    // Use cert() with environment variables for Vercel
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      // Ensure the private key's newlines are correctly formatted
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
-    }),
+    credential: cert(serviceAccount),
   });
-  console.log("Firebase Admin SDK Initialized"); // Log for confirmation
-} else {
-  // console.log('Firebase Admin SDK already initialized'); // Optional: Log if already initialized
 }
 
 export const adminAuth = admin.auth();
 export const adminDb = admin.firestore();
-export const adminMessaging = admin.messaging(); // If you use it
+export const adminMessaging = admin.messaging();
 
-export default admin; // Export the main admin instance if needed elsewhere
+export default admin;
