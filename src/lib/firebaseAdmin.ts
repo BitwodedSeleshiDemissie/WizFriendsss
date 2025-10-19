@@ -36,10 +36,12 @@ if (!getApps().length) {
     );
   }
 
+  const normalizedPrivateKey = private_key.replace(/\\n/g, "\n");
+
   const serviceAccount: ServiceAccount = {
     projectId: project_id,
     clientEmail: client_email,
-    privateKey: private_key,
+    privateKey: normalizedPrivateKey,
   };
 
   admin.initializeApp({
