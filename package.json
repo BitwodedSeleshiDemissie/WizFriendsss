@@ -11,12 +11,8 @@
     "deploy:functions": "cd functions && firebase deploy --only functions"
   },
   "dependencies": {
-    "dotenv": "^17.2.3",
     "firebase": "^12.3.0",
-    "firebase-admin": "^12.7.0",
-    "firebase-functions": "^6.2.0",
     "framer-motion": "^12.23.22",
-    "geofire-common": "^5.2.0",
     "jsonwebtoken": "^9.0.2",
     "next": "15.5.4",
     "react": "19.1.0",
