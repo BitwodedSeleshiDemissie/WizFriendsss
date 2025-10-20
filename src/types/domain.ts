@@ -1,4 +1,11 @@
-import type { GeoPoint, Timestamp } from "firebase/firestore";
+export type IsoDateString = string;
+
+export interface GeoPoint {
+  latitude: number;
+  longitude: number;
+}
+
+export type Timestamp = IsoDateString;
 
 export type AppRole = "user" | "moderator" | "customer_service" | "admin";
 

@@ -35,82 +35,49 @@ The easiest way to deploy your Next.js app is to use the [Vercel Platform](https
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
 
-## Backend API & Functions
+## Supabase Setup
 
-The WizFriends backend is implemented with Next.js App Router API routes, Firebase Admin, and Cloud Functions. All routes live under `/api/*` and expect Firebase Authentication ID tokens for mutating requests (`Authorization: Bearer <idToken>`). Server-side role checks mirror the Firestore rules.
+The app now uses [Supabase](https://supabase.com) for authentication and data storage. Seed data is still bundled for a zero-config preview, but production deployments should provision the following credentials in `.env.local` (or the Vercel dashboard):
 
-### Core Collections
-
-- `users`, `groups`, `groupMembers`
-- `activities`, `userActivityJoin`, `userActivitySave`, `posts`
-- `ideas`, `ideaEndorse`
-- `featuredAds`, `adAppears`
-- `tickets`, `userDevices`
-
-### Key Endpoints
-
-- Activities: `/api/activities`, `/api/activities/[id]`, `/api/activities/[id]/join`, `/api/activities/[id]/save`, `/api/activities/[id]/posts`
-- Groups: `/api/groups`, `/api/groups/[id]`, `/api/groups/[id]/members`, `/api/groups/[id]/activities`
-- Ideas: `/api/ideas`, `/api/ideas/[id]`, `/api/ideas/[id]/endorse`
-- Featured ads: `/api/featured-ads`, `/api/featured-ads/[id]`, `/api/featured-ads/[id]/submit`, `/api/featured-ads/[id]/review`, `/api/featured-ads/[id]/groups`
-- Support: `/api/support/tickets`, `/api/support/tickets/[id]`, `/api/notifications/token`, `/api/me`
-
-### Example Requests
-
-```bash
-# Create an activity
-curl -X POST https://your-host/api/activities \
-  -H "Authorization: Bearer $ID_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"title":"Board Game Night","description":"Casual night with snacks.","startTime":"2025-11-01T18:00:00.000Z","endTime":"2025-11-01T21:00:00.000Z","city":"Toronto","lat":43.6532,"lng":-79.3832,"visibility":"public"}'
-
-# List nearby activities
-curl "https://your-host/api/activities?lat=43.65&lng=-79.38&radius_km=10"
-
-# Endorse an idea
-curl -X POST https://your-host/api/ideas/idea123/endorse \
-  -H "Authorization: Bearer $ID_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"endorse": true}'
-
-# Approve a featured ad (customer_service/admin only)
-curl -X POST https://your-host/api/featured-ads/ad123/review \
-  -H "Authorization: Bearer $CS_ID_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"action":"approve"}'
+```
+NEXT_PUBLIC_SUPABASE_URL=<your-project-url>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
 ```
 
-### Cloud Functions
+Optional (server-side automation, not currently required by the web app):
 
-Located in `functions/` (Node 20):
-
-- `notifyUpcomingActivities` – sends reminders 24h and 2h before start.
-- `convertEligibleIdeas` – promotes endorsed ideas into activities.
-- `syncFeaturedAds` – activates/expires featured ad placements.
-
-Build locally with:
-
-```bash
-cd functions
-npm install
-npm run build
+```
+SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
 ```
 
-Use the root scripts to emulate or deploy:
+### Recommended Tables
 
-- `npm run emulate:functions`
-- `npm run deploy:functions`
+Create the tables below with matching column names (camelCase is fine—snake_case is used in the Supabase inserts). Each table should have `id uuid primary key default uuid_generate_v4()` unless noted.
 
-### Configuration Notes
+| Table | Purpose | Notable Columns |
+|-------|---------|-----------------|
+| `profiles` | User profile data for app views | `name`, `tagline`, `interests[]`, `current_city`, `photo_url` |
+| `activities` | Activities surfaced in the discover tab | `title`, `description`, `category`, `start_time`, `end_time`, `city`, `location_name`, `attendee_count`, `is_virtual`, `is_featured`, `tags[]` |
+| `user_activity_join` | Attendance records | `activity_id` (fk), `user_id` (fk), `status`, `joined_at` |
+| `user_activity_save` | Saved activities | `activity_id` (fk), `user_id` (fk), `saved_at` |
+| `ideas` | Brainstorm ideas | `prompt_text`, `ai_suggestion`, `category`, `tags[]`, `supporters[]`, `endorsement_count`, `endorsement_threshold`, `status` |
+| `idea_endorse` | Per-user endorsements | `idea_id` (fk), `user_id` (fk), `endorsed_at` |
+| `groups` | Community groups | `name`, `description`, `tags[]`, `owner_id`, `admin_ids[]`, `member_ids[]`, `members_count`, `is_private` |
+| `group_members` | Group membership / roles | `group_id` (fk), `user_id` (fk), `role`, `joined_at` |
+| `group_bulletins` | Notices & polls surfaced in the groups tab | `group_id`, `type`, `title`, `message`, `question`, `options jsonb`, `voters jsonb` |
+| `notifications` | In-app notifications for the user toast area | `recipient_id`, `title`, `message`, `read`, `created_at` |
 
-- Admin SDK uses `GOOGLE_APPLICATION_CREDENTIALS` or Application Default credentials.
-- `NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET` must be set for media validation.
-- Optional `EMAIL_PROVIDER_API_KEY` enables email sends (logged otherwise).
+Enable Realtime for the tables you want to auto-refresh (e.g. `group_bulletins`) so the client subscription stays healthy.
 
-### Firestore Indexes
+### Local Development Tips
 
-Create composite indexes when prompted, notably:
+1. Copy `.env.local.example` (or create one) and populate the Supabase credentials.
+2. Run `npm run dev` and sign in with the Google provider configured in Supabase.
+3. With env vars unset, the app falls back to the bundled seed data for demo mode.
 
-- `activities` on `(city asc, startTime asc)` and `(geohash asc)`
-- `ideas` on `(status asc, endorsementCount desc)`
-- `featuredAds` on `(status asc, startsAt asc)`
+### Migration Notes
+
+- Firebase dependencies, emulators, and Cloud Functions have been removed.
+- `AuthContext` now relies on `supabase-js` and syncs the Supabase session into an `authToken` cookie for the existing middleware guard.
+- `AppDataContext` reads/writes Supabase tables and gracefully degrades to the in-memory seed data when credentials are missing or queries fail.
+- When introducing new tables, mirror the camelCase fields used by the React components or extend the normalisers in `src/context/AppDataContext.jsx`.

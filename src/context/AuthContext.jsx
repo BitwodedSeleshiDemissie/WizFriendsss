@@ -1,72 +1,87 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { supabase } from "../lib/supabaseClient";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // ✅ Listen to Firebase user state globally
+  // ✅ Listen to Supabase session on the client
   useEffect(() => {
-    if (!auth) {
+    if (!supabase) {
       setLoading(false);
       return undefined;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    let isMounted = true;
+
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        if (!isMounted) return;
+        if (error) {
+          console.error("Failed to get Supabase session", error);
+        }
+        setSession(data?.session ?? null);
+        setUser(data?.session?.user ?? null);
+        setLoading(false);
+      })
+      .catch((error) => {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Unexpected Supabase session error", error);
+        }
+        if (isMounted) {
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+        }
+      });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession ?? null);
+      setUser(nextSession?.user ?? null);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription?.unsubscribe();
+    };
   }, []);
 
   // ✅ Keep auth cookie in sync for middleware / server routes
   useEffect(() => {
     if (loading) return;
+    if (typeof document === "undefined") return;
 
-    const syncAuthCookie = async () => {
-      if (!user) {
-        // Clear cookie if logged out
-        if (typeof document !== "undefined") {
-          document.cookie = "authToken=; path=/; max-age=0";
-        }
-        return;
-      }
+    const token = session?.access_token;
+    if (!token) {
+      document.cookie = "authToken=; path=/; max-age=0";
+      return;
+    }
 
-      try {
-        const token = await user.getIdToken();
-        if (typeof document !== "undefined") {
-          document.cookie = `authToken=${token}; path=/; max-age=3600; sameSite=lax`;
-        }
-      } catch (error) {
-        console.error("Failed to sync auth cookie", error);
-      }
-    };
-
-    syncAuthCookie();
-  }, [user, loading]);
+    document.cookie = `authToken=${token}; path=/; max-age=3600; sameSite=lax`;
+  }, [session, loading]);
 
   // ✅ Logout handler
   const logout = async () => {
-    if (auth) {
-      await signOut(auth);
+    if (supabase) {
+      await supabase.auth.signOut();
     }
     setUser(null);
+    setSession(null);
     if (typeof document !== "undefined") {
       document.cookie = "authToken=; path=/; max-age=0";
     }
   };
 
-  return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, session, loading, logout }}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => useContext(AuthContext);
