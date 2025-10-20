@@ -1,18 +1,17 @@
 "use client";
 
-import { useEffect } from "react";
+import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function AuthCallbackPage() {
+function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const code = searchParams.get("code");
+  const redirectTo = searchParams.get("redirect") || "/discover";
 
   useEffect(() => {
-    const code = searchParams.get("code");
-    const redirectTo = searchParams.get("redirect") || "/discover";
-
-    const finaliseSignIn = async () => {
+    const finalizeSignIn = async () => {
       if (!supabase) {
         router.replace("/auth/login");
         return;
@@ -32,12 +31,26 @@ export default function AuthCallbackPage() {
       }
     };
 
-    finaliseSignIn();
-  }, [router, searchParams]);
+    finalizeSignIn();
+  }, [code, redirectTo, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-pink-50">
       <p className="text-sm font-semibold text-indigo-500">Signing you in…</p>
     </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-pink-50">
+          <p className="text-sm font-semibold text-indigo-500">Preparing sign-in…</p>
+        </div>
+      }
+    >
+      <CallbackHandler />
+    </Suspense>
   );
 }

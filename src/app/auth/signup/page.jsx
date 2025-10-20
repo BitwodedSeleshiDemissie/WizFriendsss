@@ -1,10 +1,42 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
+import { useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function SignupPage() {
+  const [errorMessage, setErrorMessage] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleGoogleSignup = async () => {
+    if (!supabase) {
+      setErrorMessage("Supabase is not configured. Please try again later.");
+      return;
+    }
+
+    setErrorMessage(null);
+    setLoading(true);
+    try {
+      const redirectUrl =
+        typeof window !== "undefined"
+          ? `${window.location.origin}/auth/callback?redirect=${encodeURIComponent("/discover")}`
+          : "/discover";
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: { redirectTo: redirectUrl },
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error("❌ Google signup error:", error);
+      setLoading(false);
+      setErrorMessage(
+        error?.message ?? "Google signup failed. Please try again or contact support if the issue persists."
+      );
+    }
+  };
+
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-white to-indigo-100 relative overflow-hidden">
       <div className="absolute inset-0 backdrop-blur-3xl" />
@@ -59,11 +91,15 @@ export default function SignupPage() {
         <motion.button
           whileHover={{ scale: 1.02 }}
           whileTap={{ scale: 0.98 }}
+          onClick={handleGoogleSignup}
+          disabled={loading}
           className="w-full py-3 rounded-xl border border-gray-300 bg-white shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-3 text-gray-600 font-medium"
         >
           <Image src="/google-icon.svg" alt="Google" width={20} height={20} />
-          Continue with Google
+          {loading ? "Connecting..." : "Continue with Google"}
         </motion.button>
+
+        {errorMessage ? <p className="mt-4 text-sm text-red-500 text-center">{errorMessage}</p> : null}
 
         <p className="text-center text-gray-500 mt-8">
           Already have an account?{" "}
