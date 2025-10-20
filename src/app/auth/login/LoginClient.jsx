@@ -29,6 +29,7 @@ export default function LoginClient({ redirectTo }) {
       setErrorMessage("Supabase is not configured. Please refresh the page and try again.");
       return;
     }
+    console.log("Supabase client URL:", supabase?.supabaseUrl);
     setErrorMessage(null);
     setLoading(true);
     try {
