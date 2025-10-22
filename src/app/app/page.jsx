@@ -60,13 +60,8 @@ function HomeContent() {
   const [createForm, setCreateForm] = useState(defaultForm);
 
   const openCreateModal = useCallback(() => {
-    if (activeTab !== "nearby") {
-      setActiveTab("nearby");
-      const destination = "/app";
-      router.replace(destination, { scroll: false });
-    }
     setShowCreateModal(true);
-  }, [activeTab, router]);
+  }, []);
 
   const closeCreateModal = useCallback(() => {
     setShowCreateModal(false);
@@ -115,8 +110,9 @@ function HomeContent() {
         })
       );
       setCreateForm(defaultForm);
-      closeCreateModal();
-      handleTabChange("nearby", { scroll: false });
+      setShowCreateModal(false);
+      setActiveTab("brainstorm");
+      router.replace("/app?tab=brainstorm", { scroll: false });
     } catch (error) {
       setFormError(error.message || "We couldn't publish the activity. Please try again.");
     } finally {
