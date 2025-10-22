@@ -820,8 +820,89 @@ export function AppDataProvider({ children }) {
         if (Number.isNaN(startDate.getTime())) {
           throw new Error("Please provide a valid date and time.");
         }
+        const endDateIso = new Date(startDate.getTime() + 2 * 60 * 60 * 1000).toISOString();
+        const nowCity = city?.trim() || userProfile.currentCity || "Cape Town";
+        const payload = {
+          title: trimmedTitle,
+          description: trimmedDescription,
+          category: trimmedCategory || "Community",
+          start_time: startTimeIso,
+          end_time: endDateIso,
+          city: nowCity,
+          location_name: trimmedLocation,
+          address: trimmedLocation,
+          visibility: isVirtual ? "private" : "public",
+          host_user_id: userId,
+          created_by: userId,
+          attendee_count: 1,
+          is_featured: false,
+          is_virtual: Boolean(isVirtual),
+          tags: [],
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        let savedActivity = normaliseActivity({ id: generateId(), ...payload });
+        if (supabase) {
+          const { data, error } = await supabase
+            .from(TABLES.activities)
+            .insert(payload)
+            .select("*")
+            .single();
+          if (error) throw error;
+          savedActivity = normaliseActivity(data);
+          await supabase
+            .from(TABLES.activityJoins)
+            .upsert({
+              activity_id: savedActivity.id,
+              user_id: userId,
+              status: "joined",
+              joined_at: new Date().toISOString(),
+            });
+        }
+        setActivities((previous) => [savedActivity, ...previous]);
+        setActivityJoins((previous) => {
+          const entry = normaliseJoin({
+            id: `${savedActivity.id}_${userId}`,
+            activity_id: savedActivity.id,
+            user_id: userId,
+            status: "joined",
+            joined_at: new Date().toISOString(),
+          });
+          const filtered = previous.filter((item) => item.id !== entry.id);
+          return [...filtered, entry];
+        });
+        await appendNotification("Activity published", `${trimmedTitle} is now visible to the community.`);
+        await fetchActivities();
+        return savedActivity.id;
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    [appendNotification, fetchActivities, userId, userProfile.currentCity]
+  );
+
+  const proposeBrainstormIdea = useCallback(
+    async ({ title, description, category, date, time, location, city, isVirtual }) => {
+      if (!userId) throw new Error("Please sign in to propose ideas.");
+      const trimmedTitle = title.trim();
+      const trimmedDescription = description.trim();
+      const trimmedLocation = location.trim();
+      const trimmedCategory = category.trim();
+      if (!trimmedTitle || !trimmedDescription || !trimmedLocation) {
+        throw new Error("Please complete all required fields.");
+      }
+
+      setIsMutating(true);
+      try {
+        const startTimeIso = buildDateFromForm(date, time);
+        const startDate = new Date(startTimeIso);
+        if (Number.isNaN(startDate.getTime())) {
+          throw new Error("Please provide a valid date and time.");
+        }
         const proposedEndIso = new Date(startDate.getTime() + 2 * 60 * 60 * 1000).toISOString();
         const nowCity = city?.trim() || userProfile.currentCity || "Cape Town";
+
         const friendlySuggestedTime = `${startDate.toLocaleDateString(undefined, {
           weekday: "short",
           month: "short",
@@ -831,13 +912,14 @@ export function AppDataProvider({ children }) {
           minute: "2-digit",
         })}`;
 
-        const tags = [];
+        const tagSet = new Set();
         if (trimmedCategory) {
-          tags.push(trimmedCategory.toLowerCase());
+          tagSet.add(trimmedCategory.toLowerCase());
         }
         if (isVirtual) {
-          tags.push("virtual");
+          tagSet.add("virtual");
         }
+        const tags = Array.from(tagSet);
 
         const ideaPayload = {
           prompt_text: "",
@@ -872,20 +954,34 @@ export function AppDataProvider({ children }) {
             endorsed_at: new Date().toISOString(),
           });
         }
-        setIdeas((previous) => [ideaRecord, ...previous]);
+
+        let nextIdeas = [];
+        setIdeas((previous) => {
+          const updated = [ideaRecord, ...previous];
+          nextIdeas = updated;
+          return updated;
+        });
+        writeCollectionCache(IDEAS_CACHE_KEY, nextIdeas);
+
         setIdeaEndorsements((previous) =>
           previous.includes(ideaRecord.id) ? previous : [...previous, ideaRecord.id]
         );
+
         await appendNotification(
           "Idea submitted",
           `${trimmedTitle} is collecting endorsements before it launches as an activity.`
         );
+
+        if (supabase) {
+          await fetchIdeas();
+        }
+
         return ideaRecord.id;
       } finally {
         setIsMutating(false);
       }
     },
-    [appendNotification, supabase, userId, userProfile.currentCity]
+    [appendNotification, fetchIdeas, supabase, userId, userProfile.currentCity]
   );
 
   const joinActivity = useCallback(
@@ -1721,6 +1817,7 @@ export function AppDataProvider({ children }) {
       joinedGroups,
       ideaEndorsements,
       createActivity,
+      proposeBrainstormIdea,
       joinActivity,
       toggleSaveActivity,
       submitIdeaPrompt,
@@ -1762,6 +1859,7 @@ export function AppDataProvider({ children }) {
       ideaEndorsements,
       isMutating,
       joinActivity,
+      proposeBrainstormIdea,
       joinGroup,
       joinedActivities,
       joinedGroups,

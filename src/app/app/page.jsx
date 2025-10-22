@@ -24,7 +24,7 @@ function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const {
-    createActivity,
+    proposeBrainstormIdea,
     userProfile,
     activities,
     notifications,
@@ -96,7 +96,7 @@ function HomeContent() {
     setFormError("");
     try {
       await Promise.resolve(
-        createActivity({
+        proposeBrainstormIdea({
           title: createForm.title,
           description: createForm.description,
           category: createForm.category,
@@ -104,8 +104,6 @@ function HomeContent() {
           time: createForm.time,
           location: createForm.location,
           city: createForm.city,
-          distance: createForm.distance,
-          isFeatured: createForm.isFeatured,
           isVirtual: createForm.isVirtual,
         })
       );
@@ -114,7 +112,7 @@ function HomeContent() {
       setActiveTab("brainstorm");
       router.replace("/app?tab=brainstorm", { scroll: false });
     } catch (error) {
-      setFormError(error.message || "We couldn't publish the activity. Please try again.");
+      setFormError(error.message || "We couldn't submit the idea. Please try again.");
     } finally {
       setIsPublishing(false);
     }

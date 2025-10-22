@@ -32,8 +32,8 @@ export default function BrainstormTab({ onCreateActivity }) {
         <div className="max-w-3xl space-y-4">
           <h2 className="text-3xl font-extrabold text-gray-900">Brainstorm & bring it to life</h2>
           <p className="text-gray-600">
-            Have an idea that deserves a spotlight? Turn it into a real activity and let the community rally
-            around it. You can still explore and endorse ideas below for extra momentum.
+            Have an idea that deserves a spotlight? Submit it here, rally endorsements from neighbours, and
+            once the threshold is met it will automatically launch as a full experience.
           </p>
         </div>
         <motion.button
@@ -43,7 +43,7 @@ export default function BrainstormTab({ onCreateActivity }) {
           onClick={handleCreateClick}
           className="w-full lg:w-56 rounded-full bg-gradient-to-r from-indigo-600 to-pink-500 text-white font-semibold px-6 py-4 shadow-lg hover:shadow-xl transition-all text-center"
         >
-          Post an activity
+          Submit an idea
         </motion.button>
       </div>
 
@@ -147,7 +147,7 @@ export default function BrainstormTab({ onCreateActivity }) {
         {ideas.length === 0 && (
           <div className="rounded-3xl border border-dashed border-indigo-300 bg-white/70 p-10 text-center text-gray-500">
             <h3 className="text-lg font-semibold text-indigo-500">No brainstorm ideas yet</h3>
-            <p className="mt-2">Post an activity to get the community excited—or endorse one you love.</p>
+            <p className="mt-2">Share an idea to get the community excited—or endorse one you love.</p>
           </div>
         )}
       </div>
