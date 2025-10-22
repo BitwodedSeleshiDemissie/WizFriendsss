@@ -218,9 +218,10 @@ function HomeContent() {
                 ✕
               </button>
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Create a new activity</h2>
+                <h2 className="text-2xl font-bold text-gray-900">Propose a new community experience</h2>
                 <p className="text-sm text-gray-500 mt-2">
-                  Share the essentials—community members will see this in Activities Near Me and Explore.
+                  Share the essentials—your idea will appear in Brainstorm and gather endorsements before it
+                  goes live in the activities feed.
                 </p>
               </div>
               <form onSubmit={handleCreateActivitySubmit} className="space-y-4">
@@ -325,7 +326,7 @@ function HomeContent() {
                     isPublishing || isMutating ? "cursor-not-allowed opacity-80" : ""
                   }`}
                 >
-                  {isPublishing || isMutating ? "Publishing..." : "Publish activity"}
+                  {isPublishing || isMutating ? "Submitting..." : "Submit for endorsements"}
                 </motion.button>
               </form>
             </motion.div>

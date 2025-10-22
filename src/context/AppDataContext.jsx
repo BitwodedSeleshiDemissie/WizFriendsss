@@ -820,66 +820,72 @@ export function AppDataProvider({ children }) {
         if (Number.isNaN(startDate.getTime())) {
           throw new Error("Please provide a valid date and time.");
         }
-        const endDateIso = new Date(startDate.getTime() + 2 * 60 * 60 * 1000).toISOString();
+        const proposedEndIso = new Date(startDate.getTime() + 2 * 60 * 60 * 1000).toISOString();
         const nowCity = city?.trim() || userProfile.currentCity || "Cape Town";
-        const payload = {
+        const friendlySuggestedTime = `${startDate.toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        })} ${startDate.toLocaleTimeString(undefined, {
+          hour: "numeric",
+          minute: "2-digit",
+        })}`;
+
+        const tags = [];
+        if (trimmedCategory) {
+          tags.push(trimmedCategory.toLowerCase());
+        }
+        if (isVirtual) {
+          tags.push("virtual");
+        }
+
+        const ideaPayload = {
+          prompt_text: "",
           title: trimmedTitle,
           description: trimmedDescription,
+          ai_suggestion: trimmedDescription,
           category: trimmedCategory || "Community",
-          start_time: startTimeIso,
-          end_time: endDateIso,
+          tags,
+          preferred_location: trimmedLocation,
+          suggested_time: friendlySuggestedTime,
           city: nowCity,
-          location_name: trimmedLocation,
-          address: trimmedLocation,
-          visibility: isVirtual ? "private" : "public",
-          host_user_id: userId,
+          supporters: [userId],
+          endorsement_count: 1,
+          endorsement_threshold: ENDORSEMENT_THRESHOLD,
+          status: "open",
           created_by: userId,
-          attendee_count: 1,
-          is_featured: false,
-          is_virtual: Boolean(isVirtual),
-          tags: [],
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          proposed_start: startTimeIso,
+          proposed_end: proposedEndIso,
+          launched_activity_id: null,
         };
 
-        let savedActivity = normaliseActivity({ id: generateId(), ...payload });
+        let ideaRecord = normaliseIdea({ id: generateId(), ...ideaPayload });
         if (supabase) {
-          const { data, error } = await supabase
-            .from(TABLES.activities)
-            .insert(payload)
-            .select("*")
-            .single();
+          const { data, error } = await supabase.from(TABLES.ideas).insert(ideaPayload).select("*").single();
           if (error) throw error;
-          savedActivity = normaliseActivity(data);
-          await supabase
-            .from(TABLES.activityJoins)
-            .upsert({
-              activity_id: savedActivity.id,
-              user_id: userId,
-              status: "joined",
-              joined_at: new Date().toISOString(),
-            });
-        }
-        setActivities((previous) => [savedActivity, ...previous]);
-        setActivityJoins((previous) => {
-          const entry = normaliseJoin({
-            id: `${savedActivity.id}_${userId}`,
-            activity_id: savedActivity.id,
+          ideaRecord = normaliseIdea(data);
+          await supabase.from(TABLES.ideaEndorsements).upsert({
+            idea_id: ideaRecord.id,
             user_id: userId,
-            status: "joined",
-            joined_at: new Date().toISOString(),
+            endorsed_at: new Date().toISOString(),
           });
-          const filtered = previous.filter((item) => item.id !== entry.id);
-          return [...filtered, entry];
-        });
-        await appendNotification("Activity published", `${trimmedTitle} is now visible to the community.`);
-        await fetchActivities();
-        return savedActivity.id;
+        }
+        setIdeas((previous) => [ideaRecord, ...previous]);
+        setIdeaEndorsements((previous) =>
+          previous.includes(ideaRecord.id) ? previous : [...previous, ideaRecord.id]
+        );
+        await appendNotification(
+          "Idea submitted",
+          `${trimmedTitle} is collecting endorsements before it launches as an activity.`
+        );
+        return ideaRecord.id;
       } finally {
         setIsMutating(false);
       }
     },
-    [appendNotification, fetchActivities, userId, userProfile.currentCity]
+    [appendNotification, supabase, userId, userProfile.currentCity]
   );
 
   const joinActivity = useCallback(
