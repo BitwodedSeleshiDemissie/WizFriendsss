@@ -1,13 +1,13 @@
 "use client";
 
+import { Suspense, useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-export default function SignupPage() {
+function SignupContent() {
   const [errorMessage, setErrorMessage] = useState(null);
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
@@ -117,4 +117,17 @@ export default function SignupPage() {
     </main>
   );
 }
-//
+
+export default function SignupPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-white to-indigo-100">
+          <p className="text-sm font-semibold text-indigo-500">Loading sign-up…</p>
+        </div>
+      }
+    >
+      <SignupContent />
+    </Suspense>
+  );
+}
