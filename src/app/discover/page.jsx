@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
@@ -14,6 +14,130 @@ const STORAGE_KEYS = {
 
 const MIN_ENDORSEMENTS = 3;
 
+const LOCATION_STORAGE_KEY = "wizfriends_preferred_city";
+
+const KNOWN_CITIES = [
+  { name: "Cape Town", lat: -33.9249, lng: 18.4241 },
+  { name: "Johannesburg", lat: -26.2041, lng: 28.0473 },
+  { name: "Durban", lat: -29.8587, lng: 31.0218 },
+  { name: "Pretoria", lat: -25.7479, lng: 28.2293 },
+  { name: "Stellenbosch", lat: -33.9346, lng: 18.861 },
+];
+
+const EARTH_RADIUS_KM = 6371;
+
+const LOCATION_ALIAS_LOOKUP = {
+  "signal hill": "Cape Town",
+  "bo-kaap": "Cape Town",
+  woodstock: "Cape Town",
+  "city bowl": "Cape Town",
+  newlands: "Cape Town",
+  observatory: "Cape Town",
+  "global food house": "Cape Town",
+  "mindful grove": "Cape Town",
+};
+
+function toRadians(value) {
+  return (value * Math.PI) / 180;
+}
+
+function haversineDistance(lat1, lng1, lat2, lng2) {
+  const dLat = toRadians(lat2 - lat1);
+  const dLng = toRadians(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return EARTH_RADIUS_KM * c;
+}
+
+function normalizeText(value) {
+  return typeof value === "string" ? value.trim().toLowerCase() : "";
+}
+
+function guessCityFromLocation(location) {
+  const normalized = normalizeText(location);
+  if (!normalized) return "";
+
+  if (LOCATION_ALIAS_LOOKUP[normalized]) {
+    return LOCATION_ALIAS_LOOKUP[normalized];
+  }
+
+  for (const [alias, city] of Object.entries(LOCATION_ALIAS_LOOKUP)) {
+    if (normalized.includes(alias)) {
+      return city;
+    }
+  }
+
+  for (const city of KNOWN_CITIES) {
+    if (normalized.includes(normalizeText(city.name))) {
+      return city.name;
+    }
+  }
+
+  return "";
+}
+
+function findNearestCity(lat, lng) {
+  let bestMatch = null;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  KNOWN_CITIES.forEach((city) => {
+    const distance = haversineDistance(lat, lng, city.lat, city.lng);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestMatch = { name: city.name, distance };
+    }
+  });
+
+  return bestMatch;
+}
+
+function sanitisePotentialEvents(events = []) {
+  return events.map((event) => {
+    const rawLocation =
+      typeof event.location === "string"
+        ? event.location
+        : typeof event.preferredLocation === "string"
+        ? event.preferredLocation
+        : "";
+    const cleanedLocation = rawLocation.trim();
+    const derivedCity =
+      (typeof event.city === "string" ? event.city.trim() : "") ||
+      guessCityFromLocation(cleanedLocation);
+
+    return {
+      ...event,
+      city: derivedCity,
+      location: cleanedLocation || derivedCity || "",
+    };
+  });
+}
+
+function sanitiseMemberEvents(events = []) {
+  return events.map((event) => {
+    const rawLocation =
+      typeof event.location === "string"
+        ? event.location
+        : typeof event.preferredLocation === "string"
+        ? event.preferredLocation
+        : "";
+    const cleanedLocation = rawLocation.trim();
+    const derivedCity =
+      (typeof event.city === "string" ? event.city.trim() : "") ||
+      guessCityFromLocation(cleanedLocation);
+
+    return {
+      ...event,
+      city: derivedCity,
+      location: cleanedLocation || derivedCity || "",
+    };
+  });
+}
+
 const communities = [
   {
     id: 1,
@@ -23,6 +147,7 @@ const communities = [
     description:
       "Beachfront shared house with mindful living spaces, weekly surf lessons, and eco-friendly practices.",
     location: "Signal Hill",
+    city: "Cape Town",
     price: "R4 500 / month",
     spotsLeft: 2,
     amenities: ["Surf Shed", "Shared Studio", "Community Garden"],
@@ -35,6 +160,7 @@ const communities = [
     description:
       "Renovated heritage home with art studios, podcast booth, and rooftop cinema nights.",
     location: "Bo-Kaap",
+    city: "Cape Town",
     price: "R5 200 / month",
     spotsLeft: 4,
     amenities: ["Art Studio", "Podcast Booth", "Rooftop Cinema"],
@@ -47,6 +173,7 @@ const communities = [
     description:
       "Live with changemakers focused on sustainability projects and weekly volunteering outreaches.",
     location: "Woodstock",
+    city: "Cape Town",
     price: "R3 800 / month",
     spotsLeft: 1,
     amenities: ["Workshop Space", "Bike Share", "Community Dinners"],
@@ -59,6 +186,7 @@ const communities = [
     description:
       "Modern loft-style apartments with 24/7 coworking lab, maker space, and mentorship circles.",
     location: "City Bowl",
+    city: "Cape Town",
     price: "R6 000 / month",
     spotsLeft: 5,
     amenities: ["Cowork Lab", "Maker Space", "Mentor Sessions"],
@@ -71,6 +199,7 @@ const communities = [
     description:
       "Forest-edge sanctuary with meditation domes, plant-based kitchen, and nature therapy trails.",
     location: "Newlands",
+    city: "Cape Town",
     price: "R4 900 / month",
     spotsLeft: 3,
     amenities: ["Meditation Domes", "Plant-based Kitchen", "Forest Trails"],
@@ -83,6 +212,7 @@ const communities = [
     description:
       "International foodie home with chef-curated dinners, fermentation lab, and spice library.",
     location: "Observatory",
+    city: "Cape Town",
     price: "R5 500 / month",
     spotsLeft: 2,
     amenities: ["Chef Kitchen", "Fermentation Lab", "Spice Library"],
@@ -98,6 +228,9 @@ function DiscoverPageContent() {
   const [activeTab, setActiveTab] = useState("discover");
   const [potentialEvents, setPotentialEvents] = useState([]);
   const [memberLiveEvents, setMemberLiveEvents] = useState([]);
+  const [selectedCity, setSelectedCity] = useState("");
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState("");
 
   useEffect(() => {
     const tab = searchParams?.get("tab");
@@ -113,20 +246,97 @@ function DiscoverPageContent() {
       const storedLive = window.localStorage.getItem(STORAGE_KEYS.live);
 
       if (storedPotential) {
-        setPotentialEvents(JSON.parse(storedPotential));
+        setPotentialEvents(sanitisePotentialEvents(JSON.parse(storedPotential)));
       }
       if (storedLive) {
-        setMemberLiveEvents(JSON.parse(storedLive));
+        setMemberLiveEvents(sanitiseMemberEvents(JSON.parse(storedLive)));
       }
     } catch (error) {
       console.error("Failed to load saved events", error);
     }
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const storedCity = window.localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (storedCity) {
+        setSelectedCity(storedCity);
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Failed to load preferred city from storage", error);
+      }
+    }
+  }, []);
+
+  const updateSelectedCity = useCallback((city) => {
+    setSelectedCity(city);
+    if (typeof window !== "undefined") {
+      if (city) {
+        window.localStorage.setItem(LOCATION_STORAGE_KEY, city);
+      } else {
+        window.localStorage.removeItem(LOCATION_STORAGE_KEY);
+      }
+    }
+  }, []);
+
+  const handleDetectLocation = useCallback(() => {
+    if (typeof window === "undefined") return;
+
+    if (!("geolocation" in navigator)) {
+      setLocationError("Geolocation is not supported on this device.");
+      return;
+    }
+
+    setIsLocating(true);
+    setLocationError("");
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        const nearestCity = findNearestCity(latitude, longitude);
+        setIsLocating(false);
+
+        if (nearestCity?.name) {
+          updateSelectedCity(nearestCity.name);
+        } else {
+          setLocationError("We couldn't match your location to a nearby city yet.");
+        }
+      },
+      (error) => {
+        setIsLocating(false);
+        setLocationError(error.message || "Unable to access your location.");
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, [updateSelectedCity]);
+
   const liveEvents = useMemo(
-    () => [...communities, ...memberLiveEvents.map((event) => ({ ...event, type: event.category || event.type || "Member Event" }))],
+    () => [
+      ...communities,
+      ...memberLiveEvents.map((event) => ({
+        ...event,
+        type: event.category || event.type || "Member Event",
+        city: event.city || guessCityFromLocation(event.location),
+        location: event.location || event.city || "",
+      })),
+    ],
     [memberLiveEvents]
   );
+
+  const cityOptions = useMemo(() => {
+    const unique = new Set();
+    liveEvents.forEach((event) => {
+      if (event.city) {
+        unique.add(event.city);
+      }
+    });
+    if (selectedCity) {
+      unique.add(selectedCity);
+    }
+    return Array.from(unique).sort((a, b) => a.localeCompare(b));
+  }, [liveEvents, selectedCity]);
 
   const communityTypes = useMemo(
     () => Array.from(new Set(liveEvents.map((item) => item.type).filter(Boolean))),
@@ -140,22 +350,44 @@ function DiscoverPageContent() {
   };
 
   const filteredCommunities = liveEvents.filter((community) => {
-    if (selectedTypes.length === 0) return true;
-    return selectedTypes.includes(community.type);
+    const matchesType =
+      selectedTypes.length === 0 || selectedTypes.includes(community.type);
+    if (!matchesType) {
+      return false;
+    }
+
+    if (!selectedCity) {
+      return true;
+    }
+    const targetCity = normalizeText(selectedCity);
+    const communityCity = normalizeText(community.city);
+    const communityLocation = normalizeText(community.location);
+
+    if (communityCity === targetCity) {
+      return true;
+    }
+
+    if (communityLocation && communityLocation.includes(targetCity)) {
+      return true;
+    }
+
+    return false;
   });
 
   const persistPotentialEvents = (events) => {
+    const sanitized = sanitisePotentialEvents(events);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEYS.potential, JSON.stringify(events));
+      window.localStorage.setItem(STORAGE_KEYS.potential, JSON.stringify(sanitized));
     }
-    setPotentialEvents(events);
+    setPotentialEvents(sanitized);
   };
 
   const persistMemberLiveEvents = (events) => {
+    const sanitized = sanitiseMemberEvents(events);
     if (typeof window !== "undefined") {
-      window.localStorage.setItem(STORAGE_KEYS.live, JSON.stringify(events));
+      window.localStorage.setItem(STORAGE_KEYS.live, JSON.stringify(sanitized));
     }
-    setMemberLiveEvents(events);
+    setMemberLiveEvents(sanitized);
   };
 
   const handleEndorse = (eventId) => {
@@ -294,6 +526,37 @@ function DiscoverPageContent() {
                   );
                 })}
               </div>
+              <div className="flex flex-col md:flex-row items-center justify-center gap-3 mt-4">
+                <div className="flex items-center gap-2 bg-white/80 border border-gray-200 rounded-full px-4 py-2 shadow-sm">
+                  <span className="text-xs uppercase tracking-[0.25em] text-gray-400">
+                    Your city
+                  </span>
+                  <select
+                    value={selectedCity}
+                    onChange={(event) => updateSelectedCity(event.target.value)}
+                    className="bg-transparent text-sm font-semibold text-gray-700 focus:outline-none"
+                  >
+                    <option value="">All locations</option>
+                    {cityOptions.map((city) => (
+                      <option key={city} value={city}>
+                        {city}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleDetectLocation}
+                  disabled={isLocating}
+                  className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 text-indigo-600 px-5 py-2 text-sm font-semibold shadow-sm hover:border-indigo-400 hover:text-indigo-700 transition disabled:opacity-60"
+                >
+                  {isLocating ? "Locating…" : "Use my location"}
+                </motion.button>
+              </div>
+              {locationError ? (
+                <p className="text-xs text-red-500 mt-1">{locationError}</p>
+              ) : null}
               <Link href="/discover/new">
                 <motion.button
                   whileHover={{ scale: 1.05 }}
@@ -320,85 +583,112 @@ function DiscoverPageContent() {
 
       {activeTab === "discover" ? (
         <div className="max-w-7xl mx-auto grid sm:grid-cols-2 lg:grid-cols-3 gap-10">
-          {filteredCommunities.map((item, i) => (
+          {filteredCommunities.length === 0 ? (
             <motion.div
-              key={item.id}
-              initial={{ opacity: 0, y: 40 }}
+              initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1, duration: 0.6 }}
-              className="bg-white rounded-3xl shadow-lg hover:shadow-2xl overflow-hidden transition-all hover:-translate-y-1 border border-gray-100"
+              className="sm:col-span-2 lg:col-span-3 bg-white/80 backdrop-blur border border-dashed border-indigo-200 rounded-3xl p-10 text-center text-gray-600"
             >
-              <div className="relative h-56 w-full">
-                <Image
-                  src={item.image || "/pics/1.jpg"}
-                  alt={item.title}
-                  fill
-                  className="object-cover hover:scale-105 transition-transform duration-500"
-                />
-                <span className="absolute top-4 left-4 bg-indigo-600 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-md">
-                  {item.type || "Community"}
-                </span>
-                {item.spotsLeft ? (
-                  <span className="absolute bottom-4 right-4 bg-white/80 backdrop-blur text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full shadow-md">
-                    {item.spotsLeft} spots left
-                  </span>
-                ) : (
-                  <span className="absolute bottom-4 right-4 bg-white/80 backdrop-blur text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full shadow-md">
-                    Member-led
-                  </span>
-                )}
-              </div>
+              <h3 className="text-xl font-semibold text-indigo-500">
+                No events nearby yet
+              </h3>
+              <p className="mt-3">
+                We don&apos;t have any events in {selectedCity || "your area"} right now. Try
+                broadening your filters or check back soon.
+              </p>
+            </motion.div>
+          ) : (
+            filteredCommunities.map((item, i) => {
+              const locationText = [item.location, item.city]
+                .filter(Boolean)
+                .filter((value, index, array) => array.indexOf(value) === index)
+                .join(" · ");
 
-              <div className="p-6">
-                <div className="flex items-start justify-between gap-3 mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800 mb-1">{item.title}</h3>
-                    {item.location ? (
-                      <p className="text-sm text-indigo-500 font-semibold">{item.location}</p>
+              return (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 40 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.1, duration: 0.6 }}
+                  className="bg-white rounded-3xl shadow-lg hover:shadow-2xl overflow-hidden transition-all hover:-translate-y-1 border border-gray-100"
+                >
+                  <div className="relative h-56 w-full">
+                    <Image
+                      src={item.image || "/pics/1.jpg"}
+                      alt={item.title}
+                      fill
+                      className="object-cover hover:scale-105 transition-transform duration-500"
+                    />
+                    <span className="absolute top-4 left-4 bg-indigo-600 text-white text-xs font-semibold px-3 py-1 rounded-full shadow-md">
+                      {item.type || "Community"}
+                    </span>
+                    {item.spotsLeft ? (
+                      <span className="absolute bottom-4 right-4 bg-white/80 backdrop-blur text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full shadow-md">
+                        {item.spotsLeft} spots left
+                      </span>
                     ) : (
-                      <p className="text-sm text-indigo-500 font-semibold">{item.category || item.type}</p>
+                      <span className="absolute bottom-4 right-4 bg-white/80 backdrop-blur text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full shadow-md">
+                        Member-led
+                      </span>
                     )}
                   </div>
-                  {item.price ? (
-                    <span className="text-lg font-semibold text-gray-900">{item.price}</span>
-                  ) : (
-                    <span className="text-sm font-semibold text-indigo-500">Community Event</span>
-                  )}
-                </div>
-                <p className="text-gray-600 text-sm mb-4 leading-relaxed">
-                  {item.description}
-                </p>
-                {item.amenities && item.amenities.length > 0 ? (
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {item.amenities.map((amenity) => (
-                      <span
-                        key={amenity}
-                        className="bg-indigo-50 text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full"
-                      >
-                        {amenity}
-                      </span>
-                    ))}
+
+                  <div className="p-6">
+                    <div className="flex items-start justify-between gap-3 mb-4">
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800 mb-1">{item.title}</h3>
+                        {locationText ? (
+                          <p className="text-sm text-indigo-500 font-semibold">{locationText}</p>
+                        ) : (
+                          <p className="text-sm text-indigo-500 font-semibold">
+                            {item.category || item.type}
+                          </p>
+                        )}
+                      </div>
+                      {item.price ? (
+                        <span className="text-lg font-semibold text-gray-900">{item.price}</span>
+                      ) : (
+                        <span className="text-sm font-semibold text-indigo-500">
+                          Community Event
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-gray-600 text-sm mb-4 leading-relaxed">
+                      {item.description}
+                    </p>
+                    {item.amenities && item.amenities.length > 0 ? (
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        {item.amenities.map((amenity) => (
+                          <span
+                            key={amenity}
+                            className="bg-indigo-50 text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full"
+                          >
+                            {amenity}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap gap-2 mb-6">
+                        <span className="bg-indigo-50 text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full">
+                          Proposed by community
+                        </span>
+                        <span className="bg-pink-50 text-pink-500 text-xs font-semibold px-3 py-1 rounded-full">
+                          Endorsed by peers
+                        </span>
+                      </div>
+                    )}
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="w-full bg-gradient-to-r from-indigo-600 to-pink-500 text-white px-5 py-2 rounded-full font-medium shadow-md hover:shadow-lg transition-all"
+                    >
+                      {item.price ? "Join this Community" : "View Event Details"}
+                    </motion.button>
                   </div>
-                ) : (
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    <span className="bg-indigo-50 text-indigo-600 text-xs font-semibold px-3 py-1 rounded-full">
-                      Proposed by community
-                    </span>
-                    <span className="bg-pink-50 text-pink-500 text-xs font-semibold px-3 py-1 rounded-full">
-                      Endorsed by peers
-                    </span>
-                  </div>
-                )}
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.97 }}
-                  className="w-full bg-gradient-to-r from-indigo-600 to-pink-500 text-white px-5 py-2 rounded-full font-medium shadow-md hover:shadow-lg transition-all"
-                >
-                  {item.price ? "Join this Community" : "View Event Details"}
-                </motion.button>
-              </div>
-            </motion.div>
-          ))}
+                </motion.div>
+              );
+            })
+          )}
         </div>
       ) : (
         <div className="max-w-5xl mx-auto">
@@ -451,6 +741,12 @@ function DiscoverPageContent() {
                     <div className="p-6 flex-1 flex flex-col gap-4">
                       <div>
                         <h3 className="text-xl font-bold text-gray-800">{event.title}</h3>
+                        <p className="text-xs uppercase tracking-widest text-indigo-500 font-semibold mt-2">
+                          {[event.city, event.location]
+                            .filter(Boolean)
+                            .filter((value, index, array) => array.indexOf(value) === index)
+                            .join(" · ") || "Location TBC"}
+                        </p>
                         <p className="text-sm text-gray-500 mt-2 leading-relaxed">
                           {event.description}
                         </p>

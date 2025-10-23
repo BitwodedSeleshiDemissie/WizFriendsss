@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../../../context/AuthContext";
 
 const STORAGE_KEY_POTENTIAL = "wizfriends_potential_events";
+const LOCATION_STORAGE_KEY = "wizfriends_preferred_city";
 
 export default function NewActivityPage() {
   const router = useRouter();
@@ -15,7 +16,23 @@ export default function NewActivityPage() {
     category: "",
     description: "",
     image: "",
+    city: "",
+    location: "",
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const storedCity = window.localStorage.getItem(LOCATION_STORAGE_KEY);
+      if (storedCity) {
+        setForm((prev) => ({ ...prev, city: storedCity }));
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Failed to load preferred city", error);
+      }
+    }
+  }, []);
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -28,9 +45,16 @@ export default function NewActivityPage() {
       category: form.category.trim(),
       description: form.description.trim(),
       image: form.image.trim(),
+      city: form.city.trim(),
+      location: form.location.trim(),
     };
 
-    if (!trimmedForm.title || !trimmedForm.category || !trimmedForm.description) {
+    if (
+      !trimmedForm.title ||
+      !trimmedForm.category ||
+      !trimmedForm.description ||
+      !trimmedForm.city
+    ) {
       return;
     }
 
@@ -41,6 +65,8 @@ export default function NewActivityPage() {
       createdAt: new Date().toISOString(),
       createdBy: user ? user.uid : "anonymous",
       status: "potential",
+      city: trimmedForm.city,
+      location: trimmedForm.location || trimmedForm.city,
     };
 
     try {
@@ -54,6 +80,9 @@ export default function NewActivityPage() {
 
       if (typeof window !== "undefined") {
         window.localStorage.setItem(STORAGE_KEY_POTENTIAL, JSON.stringify(updated));
+      }
+      if (trimmedForm.city) {
+        window.localStorage.setItem(LOCATION_STORAGE_KEY, trimmedForm.city);
       }
 
       router.push("/discover?tab=potential");
@@ -98,6 +127,25 @@ export default function NewActivityPage() {
             onChange={handleChange}
             className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none"
             required
+          />
+
+          <input
+            type="text"
+            name="city"
+            placeholder="City"
+            value={form.city}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none"
+            required
+          />
+
+          <input
+            type="text"
+            name="location"
+            placeholder="Specific location or venue (optional)"
+            value={form.location}
+            onChange={handleChange}
+            className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-400 outline-none"
           />
 
           <textarea
