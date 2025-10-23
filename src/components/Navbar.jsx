@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
@@ -11,6 +11,44 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, logout } = useAuth();
+
+  const { avatarUrl, firstName, fullNameInitials } = useMemo(() => {
+    if (!user) {
+      return { avatarUrl: null, firstName: null, fullNameInitials: null };
+    }
+    const metadata = user.user_metadata ?? {};
+    const derivedAvatar =
+      user.photoURL ??
+      metadata.avatar_url ??
+      metadata.avatarUrl ??
+      null;
+
+    const rawName =
+      user.displayName ??
+      metadata.full_name ??
+      metadata.name ??
+      metadata.preferred_name ??
+      metadata.user_name ??
+      metadata.username ??
+      null;
+
+    const fallbackFromEmail = user.email ? user.email.split("@")[0] : null;
+    const safeName = rawName?.trim() || fallbackFromEmail || null;
+    const safeFirstName = safeName ? safeName.split(" ")[0] : null;
+
+    const initialsSource = rawName?.trim() || fallbackFromEmail || "WF";
+    const initials = initialsSource
+      .split(" ")
+      .map((segment) => segment.charAt(0).toUpperCase())
+      .join("")
+      .slice(0, 2);
+
+    return {
+      avatarUrl: derivedAvatar,
+      firstName: safeFirstName,
+      fullNameInitials: initials,
+    };
+  }, [user]);
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -66,17 +104,21 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-6">
           {user ? (
             <div className="flex items-center gap-4">
-              {user.photoURL && (
+              {avatarUrl ? (
                 <Image
-                  src={user.photoURL}
+                  src={avatarUrl}
                   alt="User avatar"
                   width={40}
                   height={40}
-                  className="rounded-full border-2 border-indigo-500 shadow-sm"
+                  className="rounded-full border-2 border-indigo-500 shadow-sm object-cover"
                 />
+              ) : (
+                <span className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-indigo-500 bg-indigo-100 text-sm font-semibold text-indigo-700 shadow-sm">
+                  {fullNameInitials}
+                </span>
               )}
               <span className="font-medium text-gray-700">
-                {user.displayName?.split(" ")[0]}
+                {firstName ?? "Member"}
               </span>
               <button
                 onClick={logout}
@@ -128,17 +170,21 @@ export default function Navbar() {
 
           {user ? (
             <div className="flex flex-col items-center mt-4 space-y-2">
-              {user.photoURL && (
+              {avatarUrl ? (
                 <Image
-                  src={user.photoURL}
+                  src={avatarUrl}
                   alt="User"
                   width={50}
                   height={50}
-                  className="rounded-full border-2 border-indigo-500"
+                  className="rounded-full border-2 border-indigo-500 object-cover"
                 />
+              ) : (
+                <span className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-indigo-500 bg-indigo-100 text-base font-semibold text-indigo-700">
+                  {fullNameInitials}
+                </span>
               )}
               <span className="text-gray-800 font-medium">
-                {user.displayName}
+                {firstName ?? user.email}
               </span>
               <button
                 onClick={() => {

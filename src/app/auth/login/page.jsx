@@ -4,7 +4,7 @@ import LoginClient from "./LoginClient";
 
 export default async function LoginPage({ searchParams }) {
   const params = await searchParams;
-  const redirectTo = params?.redirect || "/discover";
+  const redirectTo = params?.redirect || "/app";
   
   const cookieStore = await cookies();
   const authToken = cookieStore.get("authToken")?.value;

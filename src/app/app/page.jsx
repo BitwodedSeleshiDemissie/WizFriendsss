@@ -20,6 +20,17 @@ const TAB_CONFIG = [
   { id: "profile", label: "Profile", icon: "🧑" },
 ];
 
+const CATEGORY_OPTIONS = [
+  "Wellness",
+  "Food & Drink",
+  "Outdoors & Adventure",
+  "Arts & Culture",
+  "Sports & Fitness",
+  "Learning & Workshops",
+  "Volunteering",
+  "Networking & Professional",
+];
+
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -232,14 +243,21 @@ function HomeContent() {
                     className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
                   />
-                  <input
-                    type="text"
+                  <select
                     value={createForm.category}
                     onChange={(event) => setCreateForm((prev) => ({ ...prev, category: event.target.value }))}
-                    placeholder="Category (e.g. Wellness, Food)"
-                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
-                  />
+                  >
+                    <option value="" disabled>
+                      Select a category
+                    </option>
+                    {CATEGORY_OPTIONS.map((option) => (
+                      <option key={option} value={option}>
+                        {option}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <textarea
                   value={createForm.description}

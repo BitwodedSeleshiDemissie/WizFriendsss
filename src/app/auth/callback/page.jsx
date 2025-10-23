@@ -8,7 +8,7 @@ function CallbackHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const code = searchParams.get("code");
-  const redirectTo = searchParams.get("redirect") || "/discover";
+  const redirectTo = searchParams.get("redirect") || "/app";
 
   useEffect(() => {
     const finalizeSignIn = async () => {

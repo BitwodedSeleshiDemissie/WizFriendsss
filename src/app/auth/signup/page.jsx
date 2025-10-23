@@ -4,11 +4,14 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 export default function SignupPage() {
   const [errorMessage, setErrorMessage] = useState(null);
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirect") || "/app";
 
   const handleGoogleSignup = async () => {
     if (!supabase) {
@@ -21,8 +24,8 @@ export default function SignupPage() {
     try {
       const redirectUrl =
         typeof window !== "undefined"
-          ? `${window.location.origin}/auth/callback?redirect=${encodeURIComponent("/discover")}`
-          : "/discover";
+          ? `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`
+          : redirectTo;
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: redirectUrl },
