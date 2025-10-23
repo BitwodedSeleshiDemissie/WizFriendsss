@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useAppData } from "../../context/AppDataContext";
@@ -17,6 +18,89 @@ const dateOptions = [
   { label: "This Week", value: "Week" },
   { label: "This Weekend", value: "Weekend" },
 ];
+
+const CATEGORY_ILLUSTRATIONS = {
+  Wellness: [
+    "/category-art/wellness/wellness-1.svg",
+    "/category-art/wellness/wellness-2.svg",
+    "/category-art/wellness/wellness-3.svg",
+    "/category-art/wellness/wellness-4.svg",
+    "/category-art/wellness/wellness-5.svg",
+    "/category-art/wellness/wellness-6.svg",
+    "/category-art/wellness/wellness-7.svg",
+    "/category-art/wellness/wellness-8.svg",
+  ],
+  "Food & Drink": [
+    "/category-art/food-drink/food-1.svg",
+    "/category-art/food-drink/food-2.svg",
+    "/category-art/food-drink/food-3.svg",
+    "/category-art/food-drink/food-4.svg",
+    "/category-art/food-drink/food-5.svg",
+    "/category-art/food-drink/food-6.svg",
+    "/category-art/food-drink/food-7.svg",
+    "/category-art/food-drink/food-8.svg",
+  ],
+  "Outdoors & Adventure": [
+    "/category-art/outdoors/outdoors-1.svg",
+    "/category-art/outdoors/outdoors-2.svg",
+    "/category-art/outdoors/outdoors-3.svg",
+    "/category-art/outdoors/outdoors-4.svg",
+    "/category-art/outdoors/outdoors-5.svg",
+    "/category-art/outdoors/outdoors-6.svg",
+    "/category-art/outdoors/outdoors-7.svg",
+    "/category-art/outdoors/outdoors-8.svg",
+  ],
+  "Arts & Culture": [
+    "/category-art/arts-culture/arts-1.svg",
+    "/category-art/arts-culture/arts-2.svg",
+    "/category-art/arts-culture/arts-3.svg",
+    "/category-art/arts-culture/arts-4.svg",
+    "/category-art/arts-culture/arts-5.svg",
+    "/category-art/arts-culture/arts-6.svg",
+    "/category-art/arts-culture/arts-7.svg",
+    "/category-art/arts-culture/arts-8.svg",
+  ],
+  "Sports & Fitness": [
+    "/category-art/sports-fitness/sports-1.svg",
+    "/category-art/sports-fitness/sports-2.svg",
+    "/category-art/sports-fitness/sports-3.svg",
+    "/category-art/sports-fitness/sports-4.svg",
+    "/category-art/sports-fitness/sports-5.svg",
+    "/category-art/sports-fitness/sports-6.svg",
+    "/category-art/sports-fitness/sports-7.svg",
+    "/category-art/sports-fitness/sports-8.svg",
+  ],
+  "Learning & Workshops": [
+    "/category-art/learning/learning-1.svg",
+    "/category-art/learning/learning-2.svg",
+    "/category-art/learning/learning-3.svg",
+    "/category-art/learning/learning-4.svg",
+    "/category-art/learning/learning-5.svg",
+    "/category-art/learning/learning-6.svg",
+    "/category-art/learning/learning-7.svg",
+    "/category-art/learning/learning-8.svg",
+  ],
+  Volunteering: [
+    "/category-art/volunteering/volunteer-1.svg",
+    "/category-art/volunteering/volunteer-2.svg",
+    "/category-art/volunteering/volunteer-3.svg",
+    "/category-art/volunteering/volunteer-4.svg",
+    "/category-art/volunteering/volunteer-5.svg",
+    "/category-art/volunteering/volunteer-6.svg",
+    "/category-art/volunteering/volunteer-7.svg",
+    "/category-art/volunteering/volunteer-8.svg",
+  ],
+  "Networking & Professional": [
+    "/category-art/networking/networking-1.svg",
+    "/category-art/networking/networking-2.svg",
+    "/category-art/networking/networking-3.svg",
+    "/category-art/networking/networking-4.svg",
+    "/category-art/networking/networking-5.svg",
+    "/category-art/networking/networking-6.svg",
+    "/category-art/networking/networking-7.svg",
+    "/category-art/networking/networking-8.svg",
+  ],
+};
 
 function matchesDateFilter(eventDate, filter) {
   if (filter === "Any") return true;
@@ -98,6 +182,8 @@ export default function ActivitiesNearMeTab() {
     );
   }
 
+  const categoryCounters = {};
+
   return (
     <section className="space-y-8">
       <div className="rounded-3xl bg-white/80 backdrop-blur border border-white/50 shadow-xl p-6 md:p-10">
@@ -173,6 +259,11 @@ export default function ActivitiesNearMeTab() {
           const waitlisted = waitlistedActivities.includes(activity.id);
           const saved = savedActivities.includes(activity.id);
           const eventDate = new Date(activity.dateTime);
+          const categoryKey = activity.category;
+          const counter = categoryCounters[categoryKey] ?? 0;
+          categoryCounters[categoryKey] = counter + 1;
+          const artworkOptions = CATEGORY_ILLUSTRATIONS[categoryKey] ?? [];
+          const artworkSrc = artworkOptions.length > 0 ? artworkOptions[counter % artworkOptions.length] : null;
 
           return (
             <motion.div
@@ -182,6 +273,21 @@ export default function ActivitiesNearMeTab() {
               transition={{ delay: index * 0.05 }}
               className="rounded-3xl bg-white shadow-lg border border-gray-100 p-6 space-y-4 hover:shadow-2xl transition-all"
             >
+              <div className="overflow-hidden rounded-2xl bg-gradient-to-r from-indigo-100/80 to-pink-100/60 border border-indigo-100/80">
+                {artworkSrc ? (
+                  <Image
+                    src={artworkSrc}
+                    alt={`${activity.category} illustration`}
+                    width={640}
+                    height={360}
+                    className="w-full h-40 object-cover"
+                    priority={index < 2}
+                  />
+                ) : (
+                  <div className="h-40 w-full bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50" />
+                )}
+              </div>
+
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-xs uppercase tracking-widest text-indigo-500 font-semibold">
