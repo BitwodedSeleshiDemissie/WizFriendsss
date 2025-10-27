@@ -175,7 +175,6 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
-
       {/* Testimonials */}
       <section className="py-24 bg-gradient-to-b from-white to-indigo-50">
         <div className="max-w-6xl mx-auto px-6 lg:px-12">
