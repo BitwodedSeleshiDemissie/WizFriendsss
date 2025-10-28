@@ -87,6 +87,7 @@ export default function MessagesTab({ initialGroupId = null }) {
   const [memberProfiles, setMemberProfiles] = useState({});
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     if (typeof subscribeToGroupMessages !== "function") return undefined;
@@ -142,6 +143,18 @@ export default function MessagesTab({ initialGroupId = null }) {
     : [];
   const memberIdsKey = memberIdsForActive.join("|");
 
+  const visibleThreads = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    if (!query) {
+      return threads;
+    }
+    return threads.filter((thread) => {
+      const nameMatch = thread.name?.toLowerCase().includes(query);
+      const previewText = buildPreview(thread).toLowerCase();
+      return nameMatch || previewText.includes(query);
+    });
+  }, [threads, searchTerm]);
+
   useEffect(() => {
     setMembersError("");
     if (!activeThreadId) {
@@ -184,6 +197,7 @@ export default function MessagesTab({ initialGroupId = null }) {
       cancelled = true;
     };
   }, [activeThreadId, fetchGroupProfiles, memberIdsKey]);
+
   useEffect(() => {
     if (!activeGroupId) return;
     if (messageEndRef.current) {
@@ -200,6 +214,7 @@ export default function MessagesTab({ initialGroupId = null }) {
     }
     router.push(`/profile/${memberId}`);
   };
+
   const handleDraftChange = (event) => {
     if (!activeGroupId) return;
     const { value } = event.target;
@@ -236,7 +251,7 @@ export default function MessagesTab({ initialGroupId = null }) {
   };
 
   const handleLeaveActiveGroup = async () => {
-    if (!activeThread || leaving) return;
+    if (!activeThread) return;
     if (activeThread.ownerId === currentUserId) {
       setError("Transfer ownership before leaving this community.");
       return;
@@ -261,105 +276,127 @@ export default function MessagesTab({ initialGroupId = null }) {
   const canLeaveActive = Boolean(activeThread) && activeThread.ownerId !== currentUserId;
   const activeMemberCount = activeThread?.membersCount ?? memberIdsForActive.length;
   const layoutColumns = showGroupInfo && activeThread
-    ? "xl:grid-cols-[300px_minmax(0,1fr)_320px]"
-    : "xl:grid-cols-[300px_minmax(0,1fr)]";
+    ? "lg:grid-cols-[360px_minmax(0,1fr)_320px]"
+    : "lg:grid-cols-[360px_minmax(0,1fr)]";
 
   return (
-    <section className="space-y-6">
-      <div className="rounded-3xl border border-white/70 bg-white/90 px-6 py-6 shadow-xl">
-        <div className="flex flex-col gap-2">
-          <h2 className="text-3xl font-extrabold text-gray-900">Group inbox</h2>
-          <p className="text-sm text-gray-600">
-            Directly message your recurring communities. Threads update instantly during your session and new spaces appear as you join them.
-          </p>
-        </div>
-      </div>
-      <div className={`grid gap-6 lg:grid-cols-[300px,minmax(0,1fr)] ${layoutColumns}`}>
-        <aside className="rounded-3xl border border-white/60 bg-white/80 shadow-lg p-4 space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-gray-500">Spaces</h3>
-            <span className="text-xs font-semibold text-indigo-500">{threads.length}</span>
+    <section className="flex flex-col gap-4">
+      <div className={`grid min-h-[520px] grid-cols-1 ${layoutColumns} overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm`}>
+        <aside className="flex flex-col border-b border-gray-200 bg-gray-50 lg:border-b-0 lg:border-r">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Chats</h2>
+              <p className="text-xs text-gray-500">Stay in touch with your groups.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push("/app?tab=groups")}
+              className="rounded-full border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 transition hover:border-blue-400 hover:text-blue-600"
+            >
+              Find groups
+            </button>
           </div>
-          {threads.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-indigo-200 bg-indigo-50/50 p-6 text-sm text-indigo-500 text-center">
-              Join a community from the Groups tab to start chatting here.
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {threads.map((thread) => {
-                const active = thread.id === activeGroupId;
-                const preview = buildPreview(thread);
-                const previewTime = formatPreviewTime(thread.lastMessage?.createdAt);
-                return (
-                  <motion.button
-                    key={thread.id}
-                    type="button"
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => setActiveGroupId(thread.id)}
-                    className={`w-full rounded-2xl border px-3 py-3 text-left transition flex items-center gap-3 ${
-                      active
-                        ? "border-indigo-300 bg-indigo-50/80 shadow"
-                        : "border-transparent bg-white/80 hover:border-indigo-200"
-                    }`}
-                  >
-                    <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-2xl">
-                      <Image
-                        src={thread.image || "/pics/1.jpg"}
-                        alt={thread.name}
-                        fill
-                        sizes="48px"
-                        className="object-cover"
-                      />
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="truncate text-sm font-semibold text-gray-900">{thread.name}</p>
-                        <span className="text-xs text-gray-400 whitespace-nowrap">{previewTime}</span>
+          <div className="px-4 pb-3">
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search conversations"
+              className="w-full rounded-full border border-gray-300 bg-white px-4 py-2 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex items-center justify-between px-4 pb-2 text-xs text-gray-500">
+            <span>
+              {threads.length} {threads.length === 1 ? "chat" : "chats"}
+            </span>
+            {searchTerm.trim() && (
+              <span>Showing {visibleThreads.length}</span>
+            )}
+          </div>
+          <div className="flex-1 overflow-y-auto px-1 pb-2">
+            {threads.length === 0 ? (
+              <div className="mx-3 mt-6 rounded-2xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                Join a group to start messaging together.
+              </div>
+            ) : visibleThreads.length === 0 ? (
+              <div className="mx-3 mt-6 rounded-2xl border border-gray-200 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                No chats match your search.
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {visibleThreads.map((thread) => {
+                  const active = thread.id === activeGroupId;
+                  const preview = buildPreview(thread);
+                  const previewTime = formatPreviewTime(thread.lastMessage?.createdAt);
+                  return (
+                    <motion.button
+                      key={thread.id}
+                      type="button"
+                      whileHover={{ scale: 1.01 }}
+                      whileTap={{ scale: 0.99 }}
+                      onClick={() => setActiveGroupId(thread.id)}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
+                        active ? "bg-blue-50" : "hover:bg-gray-100"
+                      }`}
+                    >
+                      <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-gray-200">
+                        <Image
+                          src={thread.image || "/pics/1.jpg"}
+                          alt={thread.name}
+                          fill
+                          sizes="48px"
+                          className="object-cover"
+                        />
                       </div>
-                      <p className="truncate text-xs text-gray-500">{preview}</p>
-                    </div>
-                  </motion.button>
-                );
-              })}
-            </div>
-          )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className={`truncate text-sm font-semibold ${active ? "text-blue-600" : "text-gray-900"}`}>
+                            {thread.name}
+                          </p>
+                          <span className="whitespace-nowrap text-xs text-gray-400">{previewTime}</span>
+                        </div>
+                        <p className="truncate text-xs text-gray-500">{preview}</p>
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </aside>
-        <div className="rounded-3xl border border-white/70 bg-white/90 shadow-xl flex flex-col">
+        <div className="flex flex-col bg-white">
           {activeThread ? (
             <>
-                                                        <header className="flex flex-col gap-4 border-b border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="relative h-14 w-14 overflow-hidden rounded-2xl">
+              <header className="flex flex-col gap-4 border-b border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="relative h-12 w-12 overflow-hidden rounded-full bg-gray-200">
                     <Image
                       src={activeThread.image || "/pics/1.jpg"}
                       alt={activeThread.name}
                       fill
-                      sizes="56px"
+                      sizes="48px"
                       className="object-cover"
                     />
                   </div>
                   <div>
-                    <h4 className="text-lg font-semibold text-gray-900">{activeThread.name}</h4>
+                    <h4 className="text-base font-semibold text-gray-900">{activeThread.name}</h4>
                     <p className="text-xs text-gray-500">
                       {(activeThread.baseLocation || "Hybrid").trim()} - {activeMemberCount} members
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-3">
-                  <div className="flex flex-wrap justify-end gap-2">
+                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-2">
+                  <div className="flex items-center gap-2">
                     <motion.button
                       type="button"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.97 }}
                       onClick={() => setShowGroupInfo((previous) => !previous)}
-                      className={`rounded-full border px-4 py-1 text-xs font-semibold transition ${
-                        showGroupInfo
-                          ? "border-indigo-300 bg-indigo-50 text-indigo-600"
-                          : "border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                        showGroupInfo ? "border-blue-200 bg-blue-50 text-blue-600" : "border-gray-300 text-gray-600 hover:border-blue-300 hover:text-blue-600"
                       }`}
                     >
-                      {showGroupInfo ? "Hide members" : "View members"}
+                      {showGroupInfo ? "Hide details" : "View details"}
                     </motion.button>
                     {canLeaveActive ? (
                       <motion.button
@@ -368,7 +405,7 @@ export default function MessagesTab({ initialGroupId = null }) {
                         whileTap={{ scale: leaving ? 1 : 0.97 }}
                         onClick={handleLeaveActiveGroup}
                         disabled={leaving}
-                        className={`rounded-full border px-4 py-1 text-xs font-semibold transition ${
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                           leaving
                             ? "cursor-not-allowed border-red-200 text-red-300"
                             : "border-red-200 text-red-600 hover:bg-red-50"
@@ -377,16 +414,15 @@ export default function MessagesTab({ initialGroupId = null }) {
                         {leaving ? "Leaving..." : "Leave group"}
                       </motion.button>
                     ) : (
-                      <span className="self-center text-xs text-gray-400">You manage this space</span>
+                      <span className="text-xs text-gray-400">You manage this group</span>
                     )}
                   </div>
-                  <div className="text-right">
-                    <p className="text-xs uppercase tracking-[0.3em] text-indigo-400">Cadence</p>
-                    <p className="text-sm font-semibold text-indigo-600">{activeThread.cadence || "Flexible"}</p>
-                  </div>
+                  {activeThread.cadence ? (
+                    <p className="text-xs text-gray-400">{activeThread.cadence}</p>
+                  ) : null}
                 </div>
               </header>
-              <div className="flex-1 overflow-hidden">
+              <div className="flex-1 overflow-hidden bg-gray-50">
                 <div className="flex h-full flex-col gap-3 overflow-y-auto px-6 py-6">
                   {messages.map((message) => {
                     const key = `${message.id}-${message.createdAt}`;
@@ -402,28 +438,24 @@ export default function MessagesTab({ initialGroupId = null }) {
                         }`}
                       >
                         {isSystem ? (
-                          <span className="rounded-full bg-gray-100 px-4 py-1 text-xs font-medium text-gray-500">
+                          <span className="rounded-full bg-gray-200 px-4 py-1 text-xs font-medium text-gray-600">
                             {message.content}
                           </span>
                         ) : (
                           <div
-                            className={`max-w-[75%] rounded-3xl px-4 py-3 shadow ${
-                              isOwn
-                                ? "bg-gradient-to-r from-indigo-600 to-pink-500 text-white"
-                                : "bg-white border border-gray-100 text-gray-800"
+                            className={`max-w-[70%] rounded-2xl px-4 py-2 text-sm leading-relaxed shadow ${
+                              isOwn ? "bg-blue-500 text-white" : "bg-white text-gray-800"
                             }`}
                           >
                             {!isOwn && (
-                              <p className="mb-1 text-xs font-semibold text-indigo-500">
+                              <p className="mb-1 text-xs font-semibold text-gray-600">
                                 {message.senderName || "Member"}
                               </p>
                             )}
-                            <p className={`text-sm whitespace-pre-wrap ${isOwn ? "text-white" : "text-gray-700"}`}>
-                              {message.content}
-                            </p>
+                            <p className="whitespace-pre-wrap">{message.content}</p>
                             <p
-                              className={`mt-2 text-[10px] uppercase tracking-[0.3em] ${
-                                isOwn ? "text-white/70" : "text-gray-400"
+                              className={`mt-2 text-[11px] ${
+                                isOwn ? "text-blue-100" : "text-gray-400"
                               }`}
                             >
                               {formatMessageTime(message.createdAt)}
@@ -435,39 +467,34 @@ export default function MessagesTab({ initialGroupId = null }) {
                   })}
                   <div ref={messageEndRef} />
                   {messages.length === 0 && (
-                    <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
-                      Start the conversation. Introduce yourself or share your next meetup idea.
+                    <div className="rounded-2xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
+                      Start the conversation and welcome everyone in.
                     </div>
                   )}
                 </div>
               </div>
-              <form onSubmit={handleSubmit} className="border-t border-gray-100 px-6 py-5 space-y-3">
+              <form onSubmit={handleSubmit} className="border-t border-gray-200 px-6 py-4">
                 {error && (
-                  <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-500">
+                  <p className="mb-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-500">
                     {error}
                   </p>
                 )}
-                <textarea
-                  value={draftValue}
-                  onChange={handleDraftChange}
-                  onKeyDown={handleKeyDown}
-                  rows={2}
-                  placeholder={`Message ${activeThread.name}`}
-                  className="w-full rounded-3xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2 text-xs text-gray-400">
-                    <span>{userProfile?.name || "You"}</span>
-                    <span>-</span>
-                    <span>{formatPreviewTime(new Date().toISOString())}</span>
-                  </div>
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <textarea
+                    value={draftValue}
+                    onChange={handleDraftChange}
+                    onKeyDown={handleKeyDown}
+                    rows={2}
+                    placeholder={`Message ${activeThread.name}`}
+                    className="w-full flex-1 rounded-2xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
                   <motion.button
                     type="submit"
                     whileHover={{ scale: sending ? 1 : 1.02 }}
                     whileTap={{ scale: sending ? 1 : 0.97 }}
                     disabled={sending || !draftValue.trim()}
-                    className={`inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-pink-500 px-6 py-2 text-sm font-semibold text-white shadow-lg transition ${
-                      sending || !draftValue.trim() ? "opacity-70 cursor-not-allowed" : "hover:shadow-xl"
+                    className={`inline-flex items-center justify-center gap-2 rounded-full bg-blue-500 px-6 py-2 text-sm font-semibold text-white shadow transition ${
+                      sending || !draftValue.trim() ? "opacity-70" : "hover:bg-blue-600"
                     }`}
                   >
                     {sending ? "Sending..." : "Send"}
@@ -476,50 +503,47 @@ export default function MessagesTab({ initialGroupId = null }) {
               </form>
             </>
           ) : (
-            <div className="flex flex-1 flex-col items-center justify-center gap-3 text-center text-sm text-gray-500">
-              <p className="text-base font-semibold text-gray-600">No conversations yet</p>
-              <p>Join a group to unlock shared threads and real-time updates.</p>
+            <div className="flex flex-1 flex-col items-center justify-center gap-2 px-6 text-center text-sm text-gray-500">
+              <p className="text-base font-semibold text-gray-600">Select a chat to begin</p>
+              <p>Choose a conversation from the list or join a group to start messaging.</p>
             </div>
           )}
         </div>
-        {showGroupInfo && activeThread && (
-          <aside className="rounded-3xl border border-white/70 bg-white/90 shadow-xl space-y-6 p-6">
+        {showGroupInfo && activeThread ? (
+          <aside className="hidden flex-col border-l border-gray-200 bg-white px-5 py-5 lg:flex">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-gray-500">Group info</h3>
-                <p className="text-xs text-gray-400">{activeMemberCount} member{activeMemberCount === 1 ? "" : "s"}</p>
+                <h3 className="text-sm font-semibold text-gray-900">Chat details</h3>
+                <p className="text-xs text-gray-500">{activeMemberCount} {activeMemberCount === 1 ? "member" : "members"}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setShowGroupInfo(false)}
-                className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-500 transition hover:border-indigo-200 hover:text-indigo-600"
+                className="rounded-full border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 transition hover:border-blue-400 hover:text-blue-600"
               >
                 Close
               </button>
             </div>
-            <div className="space-y-3">
-              <p className="text-base font-semibold text-gray-900">{activeThread.name}</p>
+            <div className="mt-5 space-y-3 text-sm text-gray-600">
               {activeThread.description ? (
-                <p className="text-sm leading-relaxed text-gray-600">{activeThread.description}</p>
+                <p className="leading-relaxed">{activeThread.description}</p>
               ) : null}
-              <div className="space-y-1 text-xs text-gray-500">
-                {activeThread.baseLocation ? (
-                  <p>{(activeThread.baseLocation || "Hybrid").trim()}</p>
-                ) : null}
+              <div className="space-y-1 text-xs text-gray-400">
+                {activeThread.baseLocation ? <p>{(activeThread.baseLocation || "Hybrid").trim()}</p> : null}
                 {activeThread.cadence ? <p>Cadence: {activeThread.cadence}</p> : null}
               </div>
               {Array.isArray(activeThread.tags) && activeThread.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 text-xs text-indigo-500">
+                <div className="flex flex-wrap gap-2 text-xs text-blue-600">
                   {activeThread.tags.map((tag) => (
-                    <span key={tag} className="rounded-full bg-indigo-50 px-3 py-1">
+                    <span key={tag} className="rounded-full bg-blue-50 px-3 py-1">
                       #{tag}
                     </span>
                   ))}
                 </div>
               )}
             </div>
-            <div className="space-y-3">
-              <h4 className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">Members</h4>
+            <div className="mt-6 space-y-3">
+              <h4 className="text-xs font-semibold uppercase text-gray-400">Members</h4>
               {membersLoading ? (
                 <p className="text-sm text-gray-500">Loading members...</p>
               ) : membersError ? (
@@ -536,7 +560,7 @@ export default function MessagesTab({ initialGroupId = null }) {
                       profile?.tagline ||
                       profile?.currentCity ||
                       profile?.email ||
-                      (memberId === currentUserId ? "Tap to view your profile" : "Tap to view profile");
+                      (memberId === currentUserId ? "View your profile" : "View profile");
                     const roleLabel =
                       memberId === activeThread.ownerId
                         ? "Owner"
@@ -551,16 +575,16 @@ export default function MessagesTab({ initialGroupId = null }) {
                         onClick={() => handleViewProfile(memberId)}
                         className="group w-full text-left"
                       >
-                        <div className="flex items-center gap-3 rounded-2xl border border-transparent bg-white/80 px-3 py-2 transition hover:border-indigo-200 hover:bg-indigo-50">
-                          <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-indigo-100">
-                            <Image src={avatar} alt={displayName} fill sizes="40px" className="object-cover" />
+                        <div className="flex items-center gap-3 rounded-xl border border-transparent bg-gray-50 px-3 py-2 transition hover:border-blue-200 hover:bg-blue-50">
+                          <div className="relative h-9 w-9 flex-shrink-0 overflow-hidden rounded-full bg-gray-200">
+                            <Image src={avatar} alt={displayName} fill sizes="36px" className="object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-semibold text-gray-800">{displayName}</p>
                             <p className="truncate text-xs text-gray-500">{subtitle}</p>
                           </div>
                           {roleLabel && (
-                            <span className="rounded-full bg-indigo-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-indigo-600">
+                            <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-semibold uppercase text-blue-600">
                               {roleLabel}
                             </span>
                           )}
@@ -572,9 +596,8 @@ export default function MessagesTab({ initialGroupId = null }) {
               )}
             </div>
           </aside>
-        )}
+        ) : null}
       </div>
     </section>
   );
 }
-

@@ -36,7 +36,9 @@ const CATEGORY_OPTIONS = [
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const initialMessageGroupId = searchParams?.get("group") || null;
+  const tabParam = searchParams?.get("tab");
+  const groupParam = searchParams?.get("group");
+  const initialMessageGroupId = groupParam || null;
   const {
     proposeBrainstormIdea,
     userProfile,
@@ -50,7 +52,15 @@ function HomeContent() {
     isMutating,
   } = useAppData();
 
-  const [activeTab, setActiveTab] = useState("nearby");
+  const [activeTab, setActiveTab] = useState(() => {
+    if (tabParam && TAB_CONFIG.some((tab) => tab.id === tabParam)) {
+      return tabParam;
+    }
+    if (!tabParam && groupParam) {
+      return "messages";
+    }
+    return "nearby";
+  });
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [formError, setFormError] = useState("");
@@ -96,22 +106,16 @@ function HomeContent() {
   }, [defaultForm]);
 
   useEffect(() => {
-    const tabParam = searchParams?.get("tab");
-    const groupParam = searchParams?.get("group");
     if (tabParam && TAB_CONFIG.some((tab) => tab.id === tabParam)) {
-      if (tabParam !== activeTab) {
-        setActiveTab(tabParam);
-      }
+      setActiveTab((previous) => (previous === tabParam ? previous : tabParam));
       return;
     }
-    if (!tabParam && groupParam && activeTab !== "messages") {
-      setActiveTab("messages");
+    if (!tabParam && groupParam) {
+      setActiveTab((previous) => (previous === "messages" ? previous : "messages"));
       return;
     }
-    if (!tabParam && !groupParam && activeTab !== "nearby") {
-      setActiveTab("nearby");
-    }
-  }, [searchParams, activeTab]);
+    setActiveTab((previous) => (previous === "nearby" ? previous : "nearby"));
+  }, [tabParam, groupParam]);
 
   const handleTabChange = (tabId, options = {}) => {
     const { scroll = true, groupId = null } = options;
@@ -179,54 +183,57 @@ function HomeContent() {
   const totalUpcomingActivities = loadingActivities ? "…" : activities.length;
   const totalGroups = loadingGroups ? "…" : groups.length;
   const unreadNotifications = loadingNotifications ? "…" : notifications.length;
+  const showDashboardHero = activeTab === "nearby";
 
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-white via-indigo-50 to-pink-100 text-gray-900 pb-40">
       <div className="max-w-7xl mx-auto px-5 pt-28 space-y-12">
-        <header className="rounded-3xl bg-white/80 backdrop-blur border border-white/60 shadow-xl p-8 md:p-12 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
-          <div className="space-y-4">
-            <p className="text-xs uppercase tracking-[0.3em] text-indigo-500 font-semibold">
-              WizFriends · Product v1.0
-            </p>
-            <h1 className="text-4xl md:text-5xl font-black leading-tight">
-              Find your people, wherever you are.
-            </h1>
-            <p className="text-gray-600 max-w-2xl">
-              Built for newcomers, locals, and community builders. Discover activities, surface new ideas,
-              spin up recurring groups, and keep everything organised in one place.
-            </p>
-            <div className="flex flex-wrap gap-3 text-xs text-gray-600">
-              <span className="bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full">Activities Near Me</span>
-              <span className="bg-pink-50 text-pink-500 px-3 py-1 rounded-full">Explore & Featured</span>
-              <span className="bg-purple-50 text-purple-500 px-3 py-1 rounded-full">Brainstorm with AI</span>
-              <span className="bg-emerald-50 text-emerald-500 px-3 py-1 rounded-full">Groups & Community</span>
-              <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full">Profile Hub</span>
-            </div>
-          </div>
-          <div className="lg:w-72 bg-gradient-to-br from-indigo-600/10 to-pink-600/10 border border-white/70 rounded-3xl p-6 space-y-5">
-            <h2 className="text-lg font-semibold text-gray-800">Product health snapshot</h2>
-            <div className="space-y-3 text-sm text-gray-700">
-              <div className="flex items-center justify-between">
-                <span>Upcoming activities</span>
-                <span className="font-semibold text-indigo-600">{totalUpcomingActivities}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Active groups</span>
-                <span className="font-semibold text-pink-500">{totalGroups}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span>Open notifications</span>
-                <span className="font-semibold text-purple-500">{unreadNotifications}</span>
+        {showDashboardHero && (
+          <header className="rounded-3xl bg-white/80 backdrop-blur border border-white/60 shadow-xl p-8 md:p-12 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+            <div className="space-y-4">
+              <p className="text-xs uppercase tracking-[0.3em] text-indigo-500 font-semibold">
+                WizFriends - Product v1.0
+              </p>
+              <h1 className="text-4xl md:text-5xl font-black leading-tight">
+                Find your people, wherever you are.
+              </h1>
+              <p className="text-gray-600 max-w-2xl">
+                Built for newcomers, locals, and community builders. Discover activities, surface new ideas,
+                spin up recurring groups, and keep everything organised in one place.
+              </p>
+              <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+                <span className="bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full">Activities Near Me</span>
+                <span className="bg-pink-50 text-pink-500 px-3 py-1 rounded-full">Explore & Featured</span>
+                <span className="bg-purple-50 text-purple-500 px-3 py-1 rounded-full">Brainstorm with AI</span>
+                <span className="bg-emerald-50 text-emerald-500 px-3 py-1 rounded-full">Groups & Community</span>
+                <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full">Profile Hub</span>
               </div>
             </div>
-            <p className="text-xs text-gray-500">
-              Success = new members joining or endorsing within 3 days, at least one event per first session,
-              and weekly returners hosting or attending.
-            </p>
-          </div>
-        </header>
+            <div className="lg:w-72 bg-gradient-to-br from-indigo-600/10 to-pink-600/10 border border-white/70 rounded-3xl p-6 space-y-5">
+              <h2 className="text-lg font-semibold text-gray-800">Product health snapshot</h2>
+              <div className="space-y-3 text-sm text-gray-700">
+                <div className="flex items-center justify-between">
+                  <span>Upcoming activities</span>
+                  <span className="font-semibold text-indigo-600">{totalUpcomingActivities}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Active groups</span>
+                  <span className="font-semibold text-pink-500">{totalGroups}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span>Open notifications</span>
+                  <span className="font-semibold text-purple-500">{unreadNotifications}</span>
+                </div>
+              </div>
+              <p className="text-xs text-gray-500">
+                Success = new members joining or endorsing within 3 days, at least one event per first session,
+                and weekly returners hosting or attending.
+              </p>
+            </div>
+          </header>
+        )}
 
-        <section>{renderActiveTab()}</section>
+        <section className={showDashboardHero ? "" : "pt-6"}>{renderActiveTab()}</section>
       </div>
 
       <BottomTabNav
@@ -400,3 +407,5 @@ export default function AppPage() {
     </Suspense>
   );
 }
+
+
