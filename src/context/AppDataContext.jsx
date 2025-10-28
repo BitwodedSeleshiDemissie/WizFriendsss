@@ -40,6 +40,7 @@ const TABLES = {
   groupMembers: "group_members",
   ideaEndorsements: "idea_endorse",
   groupBulletins: "group_bulletins",
+  groupMessages: "group_messages",
 };
 
 const ACTIVITIES_CACHE_KEY = "wizfriends.cache.activities";
@@ -322,6 +323,19 @@ function normaliseBulletin(row) {
   };
 }
 
+function normaliseGroupMessage(row) {
+  if (!row) return null;
+  return {
+    id: row.id ?? generateId(),
+    groupId: row.groupId ?? row.group_id ?? null,
+    senderId: row.senderId ?? row.sender_id ?? null,
+    senderName: row.senderName ?? row.sender_name ?? "",
+    content: row.content ?? row.message ?? "",
+    createdAt: coerceIso(row.createdAt ?? row.created_at) ?? new Date().toISOString(),
+    system: ensureBoolean(row.system ?? row.isSystem ?? false),
+  };
+}
+
 function readCollectionCache(key, fallback) {
   if (typeof window === "undefined") return fallback;
   try {
@@ -367,6 +381,8 @@ export function AppDataProvider({ children }) {
   const [activityJoins, setActivityJoins] = useState([]);
   const [activitySaves, setActivitySaves] = useState([]);
   const [groupMemberships, setGroupMemberships] = useState([]);
+  const [groupMessages, setGroupMessages] = useState({});
+
   const [ideaEndorsements, setIdeaEndorsements] = useState([]);
 
   const [loadingActivities, setLoadingActivities] = useState(activities.length === 0);
@@ -792,6 +808,120 @@ export function AppDataProvider({ children }) {
     },
     [userId]
   );
+  const fetchGroupMessages = useCallback(
+    async (groupId) => {
+      if (!groupId) return [];
+      if (!supabase) {
+        return [];
+      }
+      const { data, error } = await supabase
+        .from(TABLES.groupMessages)
+        .select("*")
+        .eq("group_id", groupId)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      if (error) {
+        console.error("Failed to load group messages", error);
+        return [];
+      }
+      const mapped = (data ?? []).map(normaliseGroupMessage).filter(Boolean);
+      setGroupMessages((previous) => ({
+        ...previous,
+        [groupId]: mapped,
+      }));
+      return mapped;
+    },
+    [supabase]
+  );
+
+  const subscribeToGroupMessages = useCallback(
+    (groupId) => {
+      if (!groupId) return () => {};
+      if (!supabase) {
+        fetchGroupMessages(groupId);
+        return () => {};
+      }
+
+      const sync = async () => {
+        try {
+          await fetchGroupMessages(groupId);
+        } catch (error) {
+          console.error("Failed to refresh group messages", error);
+        }
+      };
+
+      sync();
+
+      const channel = supabase
+        .channel(`group_messages_${groupId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: TABLES.groupMessages,
+            filter: `group_id=eq.${groupId}`,
+          },
+          sync
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    },
+    [fetchGroupMessages, supabase]
+  );
+
+  const sendGroupMessage = useCallback(
+    async (groupId, content) => {
+      if (!userId) throw new Error("Please sign in to chat.");
+      const trimmed = (content ?? "").trim();
+      if (!trimmed) return null;
+
+      if (!supabase) {
+        const fallback = normaliseGroupMessage({
+          id: generateId(),
+          groupId,
+          senderId: userId,
+          senderName: userProfile?.name || displayName || "You",
+          content: trimmed,
+          createdAt: new Date().toISOString(),
+          system: false,
+        });
+        setGroupMessages((previous) => ({
+          ...previous,
+          [groupId]: [...(previous[groupId] ?? []), fallback],
+        }));
+        return fallback.id;
+      }
+
+      const { data, error } = await supabase
+        .from(TABLES.groupMessages)
+        .insert({
+          group_id: groupId,
+          sender_id: userId,
+          content: trimmed,
+          system: false,
+        })
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error("Failed to send group message", error);
+        throw error;
+      }
+
+      const saved = normaliseGroupMessage(data);
+      setGroupMessages((previous) => ({
+        ...previous,
+        [groupId]: [...(previous[groupId] ?? []), saved],
+      }));
+      return saved.id;
+    },
+    [displayName, supabase, userId, userProfile?.name]
+  );
+
 
   const createActivity = useCallback(
     async ({
@@ -1808,6 +1938,9 @@ export function AppDataProvider({ children }) {
       featuredActivities,
       trendingActivities,
       groups,
+      groupMessages,
+      subscribeToGroupMessages,
+      fetchGroupMessages,
       ideas,
       notifications,
       userProfile,
@@ -1824,6 +1957,7 @@ export function AppDataProvider({ children }) {
       endorseIdea,
       createGroup,
       joinGroup,
+      sendGroupMessage,
       leaveGroup,
       promoteGroupMember,
       createGroupNotice,
@@ -1855,12 +1989,16 @@ export function AppDataProvider({ children }) {
       fetchGroupProfiles,
       featuredActivities,
       groups,
+      groupMessages,
+      subscribeToGroupMessages,
+      fetchGroupMessages,
       ideas,
       ideaEndorsements,
       isMutating,
       joinActivity,
       proposeBrainstormIdea,
       joinGroup,
+      sendGroupMessage,
       joinedActivities,
       joinedGroups,
       leaveGroup,

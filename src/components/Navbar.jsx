@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 
 
@@ -11,6 +12,7 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, logout } = useAuth();
+  const router = useRouter();
 
   const { avatarUrl, firstName, fullNameInitials } = useMemo(() => {
     if (!user) {
@@ -49,6 +51,10 @@ export default function Navbar() {
       fullNameInitials: initials,
     };
   }, [user]);
+
+  const openMessages = () => {
+    router.push("/app?tab=messages");
+  };
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 40);
@@ -104,6 +110,16 @@ export default function Navbar() {
         <div className="hidden md:flex items-center gap-6">
           {user ? (
             <div className="flex items-center gap-4">
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={openMessages}
+                className="relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-indigo-100 bg-white text-lg text-indigo-600 shadow-sm transition hover:border-indigo-300 hover:text-indigo-700"
+                aria-label="Open inbox"
+              >
+                <span aria-hidden="true">💬</span>
+              </motion.button>
               {avatarUrl ? (
                 <Image
                   src={avatarUrl}
@@ -186,6 +202,15 @@ export default function Navbar() {
               <span className="text-gray-800 font-medium">
                 {firstName ?? user.email}
               </span>
+              <button
+                onClick={() => {
+                  openMessages();
+                  setMenuOpen(false);
+                }}
+                className="inline-flex items-center gap-2 rounded-full border border-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 transition"
+              >
+                <span aria-hidden="true">💬</span> Inbox
+              </button>
               <button
                 onClick={() => {
                   logout();

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { useAppData } from "../../context/AppDataContext";
@@ -45,6 +46,7 @@ export default function GroupsTab() {
     isMutating,
   } = useAppData();
 
+  const router = useRouter();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [form, setForm] = useState({
     name: "",
@@ -65,15 +67,21 @@ export default function GroupsTab() {
   const [pendingGroupId, setPendingGroupId] = useState(null);
   const [pendingAction, setPendingAction] = useState(null);
 
+  const [recentlyJoinedGroup, setRecentlyJoinedGroup] = useState(null);
   const [noticeForm, setNoticeForm] = useState({ title: "", message: "" });
   const [pollForm, setPollForm] = useState({
     question: "",
     options: DEFAULT_POLL_OPTIONS,
   });
 
+  const availableGroups = useMemo(
+    () => groups.filter((group) => !joinedGroups.includes(group.id)),
+    [groups, joinedGroups]
+  );
+
   const selectedGroup = useMemo(
-    () => groups.find((group) => group.id === selectedGroupId) || null,
-    [groups, selectedGroupId]
+    () => availableGroups.find((group) => group.id === selectedGroupId) || null,
+    [availableGroups, selectedGroupId]
   );
 
   const isMember = selectedGroup ? joinedGroups.includes(selectedGroup.id) : false;
@@ -82,10 +90,16 @@ export default function GroupsTab() {
     isOwner || (selectedGroup?.adminIds || []).includes(currentUserId ?? "__");
 
   useEffect(() => {
-    if (!selectedGroupId && groups.length > 0) {
-      setSelectedGroupId(groups[0].id);
+    if (availableGroups.length === 0) {
+      if (selectedGroupId !== null) {
+        setSelectedGroupId(null);
+      }
+      return;
     }
-  }, [groups, selectedGroupId]);
+    if (!selectedGroupId || !availableGroups.some((group) => group.id === selectedGroupId)) {
+      setSelectedGroupId(availableGroups[0].id);
+    }
+  }, [availableGroups, selectedGroupId]);
 
   useEffect(() => {
     if (!selectedGroupId) {
@@ -101,13 +115,19 @@ export default function GroupsTab() {
       setMemberProfiles({});
       return;
     }
-    const group = groups.find((item) => item.id === selectedGroupId);
+    const group = availableGroups.find((item) => item.id === selectedGroupId);
     if (!group) return;
 
     fetchGroupProfiles(group.memberIds || [])
       .then((profiles) => setMemberProfiles(profiles))
       .catch(() => setMemberProfiles({}));
-  }, [selectedGroupId, groups, fetchGroupProfiles]);
+  }, [selectedGroupId, availableGroups, fetchGroupProfiles]);
+
+  useEffect(() => {
+    if (recentlyJoinedGroup && !joinedGroups.includes(recentlyJoinedGroup.id)) {
+      setRecentlyJoinedGroup(null);
+    }
+  }, [joinedGroups, recentlyJoinedGroup]);
 
   const handleCreateGroup = async (event) => {
     event.preventDefault();
@@ -154,7 +174,8 @@ export default function GroupsTab() {
       setPendingGroupId(group.id);
       setPendingAction("join");
       await joinGroup(group.id);
-      setManageFeedback(`You're now part of ${group.name}.`);
+      setManageFeedback(`You're now part of ${group.name}. Head to the inbox to say hello.`);
+      setRecentlyJoinedGroup({ id: group.id, name: group.name });
     } catch (error) {
       setManageError(error.message || "Unable to join this group right now.");
     } finally {
@@ -162,6 +183,15 @@ export default function GroupsTab() {
       setPendingAction(null);
       setIsManaging(false);
     }
+  };
+
+  const navigateToMessages = (groupId) => {
+    const params = new URLSearchParams();
+    params.set("tab", "messages");
+    if (groupId) {
+      params.set("group", groupId);
+    }
+    router.push(`/app?${params.toString()}`, { scroll: false });
   };
 
   const handleLeaveGroup = async (group) => {
@@ -352,6 +382,40 @@ export default function GroupsTab() {
         )}
       </div>
 
+      {recentlyJoinedGroup && (
+        <div className="rounded-3xl border border-indigo-200 bg-indigo-50/70 px-6 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-indigo-700">
+              You're in {recentlyJoinedGroup.name}.
+            </p>
+            <p className="text-xs text-indigo-500">
+              Head to the inbox to meet members and start chatting.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              type="button"
+              onClick={() => {
+                navigateToMessages(recentlyJoinedGroup.id);
+                setRecentlyJoinedGroup(null);
+              }}
+              className="rounded-full bg-gradient-to-r from-indigo-600 to-pink-500 px-5 py-2 text-sm font-semibold text-white shadow-lg hover:shadow-xl transition"
+            >
+              Go to messages
+            </motion.button>
+            <button
+              type="button"
+              onClick={() => setRecentlyJoinedGroup(null)}
+              className="rounded-full border border-indigo-200 px-4 py-2 text-xs font-semibold text-indigo-500 hover:bg-indigo-50 transition"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
+
       {loadingGroups ? (
         <div className="rounded-3xl border border-white/60 bg-white/70 shadow-inner px-6 py-16 text-center text-sm font-semibold text-indigo-500">
           Loading community spaces…
@@ -359,12 +423,12 @@ export default function GroupsTab() {
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr),minmax(0,1.2fr)]">
           <div className="space-y-4">
-            {groups.length === 0 && (
+            {availableGroups.length === 0 && (
               <div className="rounded-3xl border border-dashed border-indigo-200 bg-white/70 p-10 text-center text-gray-500">
-                No groups yet. Create one to kickstart recurring experiences.
+                You're already in every available community. Head to the inbox or launch a new group.
               </div>
             )}
-            {groups.map((group) => {
+            {availableGroups.map((group) => {
               const member = joinedGroups.includes(group.id);
               const owner = group.ownerId === currentUserId;
               const admin =
@@ -779,7 +843,7 @@ export default function GroupsTab() {
               </div>
             ) : (
               <div className="rounded-3xl border border-dashed border-indigo-200 bg-white/70 px-6 py-16 text-center text-sm text-gray-500">
-                Select a group to view details and manage the conversation.
+                Discoverable groups will appear here. Check your inbox for communities you already joined.
               </div>
             )}
           </div>

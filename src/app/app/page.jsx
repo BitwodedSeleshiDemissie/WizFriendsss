@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import ActivitiesNearMeTab from "../../components/tabs/ActivitiesNearMeTab";
 import ExploreTab from "../../components/tabs/ExploreTab";
 import BrainstormTab from "../../components/tabs/BrainstormTab";
+import MessagesTab from "../../components/tabs/MessagesTab";
 import GroupsTab from "../../components/tabs/GroupsTab";
 import ProfileTab from "../../components/tabs/ProfileTab";
 import BottomTabNav from "../../components/BottomTabNav";
@@ -17,6 +18,7 @@ const TAB_CONFIG = [
   { id: "explore", label: "Explore", icon: "🧭" },
   { id: "brainstorm", label: "Brainstorm", icon: "💡" },
   { id: "groups", label: "Groups", icon: "🤝" },
+  { id: "messages", label: "Inbox", icon: "💬" },
   { id: "profile", label: "Profile", icon: "🧑" },
 ];
 
@@ -34,6 +36,7 @@ const CATEGORY_OPTIONS = [
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const initialMessageGroupId = searchParams?.get("group") || null;
   const {
     proposeBrainstormIdea,
     userProfile,
@@ -76,9 +79,17 @@ function HomeContent() {
 
   const closeCreateModal = useCallback(() => {
     setShowCreateModal(false);
-    const destination = activeTab === "nearby" ? "/app" : `/app?tab=${activeTab}`;
+    const params = new URLSearchParams();
+    if (activeTab !== "nearby") {
+      params.set("tab", activeTab);
+    }
+    if (activeTab === "messages" && initialMessageGroupId) {
+      params.set("group", initialMessageGroupId);
+    }
+    const query = params.toString();
+    const destination = query ? `/app?${query}` : "/app";
     router.replace(destination, { scroll: false });
-  }, [activeTab, router]);
+  }, [activeTab, initialMessageGroupId, router]);
 
   useEffect(() => {
     setCreateForm(defaultForm);
@@ -86,19 +97,36 @@ function HomeContent() {
 
   useEffect(() => {
     const tabParam = searchParams?.get("tab");
-    if (tabParam && TAB_CONFIG.some((tab) => tab.id === tabParam) && tabParam !== activeTab) {
-      setActiveTab(tabParam);
+    const groupParam = searchParams?.get("group");
+    if (tabParam && TAB_CONFIG.some((tab) => tab.id === tabParam)) {
+      if (tabParam !== activeTab) {
+        setActiveTab(tabParam);
+      }
+      return;
     }
-    if (!tabParam && activeTab !== "nearby") {
+    if (!tabParam && groupParam && activeTab !== "messages") {
+      setActiveTab("messages");
+      return;
+    }
+    if (!tabParam && !groupParam && activeTab !== "nearby") {
       setActiveTab("nearby");
     }
   }, [searchParams, activeTab]);
 
-  const handleTabChange = (tabId, options = { scroll: true }) => {
+  const handleTabChange = (tabId, options = {}) => {
+    const { scroll = true, groupId = null } = options;
     if (!TAB_CONFIG.some((tab) => tab.id === tabId)) return;
     setActiveTab(tabId);
-    const destination = tabId === "nearby" ? "/app" : `/app?tab=${tabId}`;
-    router.replace(destination, { scroll: options.scroll });
+    const params = new URLSearchParams();
+    if (tabId !== "nearby") {
+      params.set("tab", tabId);
+    }
+    if (tabId === "messages" && groupId) {
+      params.set("group", groupId);
+    }
+    const query = params.toString();
+    const destination = query ? `/app?${query}` : "/app";
+    router.replace(destination, { scroll });
   };
 
   const handleCreateActivitySubmit = async (event) => {
@@ -139,6 +167,8 @@ function HomeContent() {
         return <BrainstormTab onCreateActivity={openCreateModal} />;
       case "groups":
         return <GroupsTab />;
+      case "messages":
+        return <MessagesTab initialGroupId={initialMessageGroupId} />;
       case "profile":
         return <ProfileTab />;
       default:
