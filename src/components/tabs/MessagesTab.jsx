@@ -1,8 +1,9 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { useAppData } from "../../context/AppDataContext";
 
 const MAX_PREVIEW_LENGTH = 72;
@@ -52,7 +53,10 @@ export default function MessagesTab({ initialGroupId = null }) {
     leaveGroup,
     currentUserId,
     userProfile,
+    fetchGroupProfiles,
   } = useAppData();
+
+  const router = useRouter();
 
   const joinedGroupItems = useMemo(
     () => groups.filter((group) => joinedGroups.includes(group.id)),
@@ -79,6 +83,10 @@ export default function MessagesTab({ initialGroupId = null }) {
   const [sending, setSending] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const messageEndRef = useRef(null);
+  const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [memberProfiles, setMemberProfiles] = useState({});
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [membersError, setMembersError] = useState("");
 
   useEffect(() => {
     if (typeof subscribeToGroupMessages !== "function") return undefined;
@@ -118,12 +126,64 @@ export default function MessagesTab({ initialGroupId = null }) {
     setError("");
   }, [activeGroupId]);
 
+  useEffect(() => {
+    setShowGroupInfo(false);
+  }, [activeGroupId]);
+
   const activeThread = activeGroupId
     ? threads.find((thread) => thread.id === activeGroupId) ?? null
     : null;
   const messages = activeThread?.messages ?? [];
   const draftValue = activeGroupId ? drafts[activeGroupId] ?? "" : "";
 
+  const activeThreadId = activeThread?.id ?? null;
+  const memberIdsForActive = Array.isArray(activeThread?.memberIds)
+    ? activeThread.memberIds.filter(Boolean)
+    : [];
+  const memberIdsKey = memberIdsForActive.join("|");
+
+  useEffect(() => {
+    setMembersError("");
+    if (!activeThreadId) {
+      setMembersLoading(false);
+      setMemberProfiles({});
+      setShowGroupInfo(false);
+      return;
+    }
+    if (memberIdsForActive.length === 0) {
+      setMembersLoading(false);
+      setMemberProfiles({});
+      return;
+    }
+    if (typeof fetchGroupProfiles !== "function") {
+      setMembersLoading(false);
+      setMembersError("Member directory is unavailable right now.");
+      setMemberProfiles({});
+      return;
+    }
+    let cancelled = false;
+    setMembersLoading(true);
+    fetchGroupProfiles(memberIdsForActive)
+      .then((profiles) => {
+        if (!cancelled) {
+          setMemberProfiles(profiles);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setMemberProfiles({});
+          setMembersError(err?.message || "We couldn't load the member list. Please try again.");
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setMembersLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeThreadId, fetchGroupProfiles, memberIdsKey]);
   useEffect(() => {
     if (!activeGroupId) return;
     if (messageEndRef.current) {
@@ -131,6 +191,15 @@ export default function MessagesTab({ initialGroupId = null }) {
     }
   }, [messages, activeGroupId]);
 
+  const handleViewProfile = (memberId) => {
+    if (!memberId) return;
+    setShowGroupInfo(false);
+    if (memberId === currentUserId) {
+      router.push("/app?tab=profile");
+      return;
+    }
+    router.push(`/profile/${memberId}`);
+  };
   const handleDraftChange = (event) => {
     if (!activeGroupId) return;
     const { value } = event.target;
@@ -190,6 +259,10 @@ export default function MessagesTab({ initialGroupId = null }) {
   };
 
   const canLeaveActive = Boolean(activeThread) && activeThread.ownerId !== currentUserId;
+  const activeMemberCount = activeThread?.membersCount ?? memberIdsForActive.length;
+  const layoutColumns = showGroupInfo && activeThread
+    ? "xl:grid-cols-[300px_minmax(0,1fr)_320px]"
+    : "xl:grid-cols-[300px_minmax(0,1fr)]";
 
   return (
     <section className="space-y-6">
@@ -201,7 +274,7 @@ export default function MessagesTab({ initialGroupId = null }) {
           </p>
         </div>
       </div>
-      <div className="grid gap-6 lg:grid-cols-[300px,minmax(0,1fr)]">
+      <div className={`grid gap-6 lg:grid-cols-[300px,minmax(0,1fr)] ${layoutColumns}`}>
         <aside className="rounded-3xl border border-white/60 bg-white/80 shadow-lg p-4 space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-gray-500">Spaces</h3>
@@ -255,7 +328,7 @@ export default function MessagesTab({ initialGroupId = null }) {
         <div className="rounded-3xl border border-white/70 bg-white/90 shadow-xl flex flex-col">
           {activeThread ? (
             <>
-              <header className="flex flex-col gap-4 border-b border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
+                                                        <header className="flex flex-col gap-4 border-b border-gray-100 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-4">
                   <div className="relative h-14 w-14 overflow-hidden rounded-2xl">
                     <Image
@@ -269,31 +342,48 @@ export default function MessagesTab({ initialGroupId = null }) {
                   <div>
                     <h4 className="text-lg font-semibold text-gray-900">{activeThread.name}</h4>
                     <p className="text-xs text-gray-500">
-                      {(activeThread.baseLocation || "Hybrid").trim()} - {activeThread.membersCount ?? activeThread.memberIds?.length ?? 0} members
+                      {(activeThread.baseLocation || "Hybrid").trim()} - {activeMemberCount} members
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-2">
+                <div className="flex flex-col items-end gap-3">
+                  <div className="flex flex-wrap justify-end gap-2">
+                    <motion.button
+                      type="button"
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setShowGroupInfo((previous) => !previous)}
+                      className={`rounded-full border px-4 py-1 text-xs font-semibold transition ${
+                        showGroupInfo
+                          ? "border-indigo-300 bg-indigo-50 text-indigo-600"
+                          : "border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                      }`}
+                    >
+                      {showGroupInfo ? "Hide members" : "View members"}
+                    </motion.button>
+                    {canLeaveActive ? (
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: leaving ? 1 : 1.02 }}
+                        whileTap={{ scale: leaving ? 1 : 0.97 }}
+                        onClick={handleLeaveActiveGroup}
+                        disabled={leaving}
+                        className={`rounded-full border px-4 py-1 text-xs font-semibold transition ${
+                          leaving
+                            ? "cursor-not-allowed border-red-200 text-red-300"
+                            : "border-red-200 text-red-600 hover:bg-red-50"
+                        }`}
+                      >
+                        {leaving ? "Leaving..." : "Leave group"}
+                      </motion.button>
+                    ) : (
+                      <span className="self-center text-xs text-gray-400">You manage this space</span>
+                    )}
+                  </div>
                   <div className="text-right">
                     <p className="text-xs uppercase tracking-[0.3em] text-indigo-400">Cadence</p>
                     <p className="text-sm font-semibold text-indigo-600">{activeThread.cadence || "Flexible"}</p>
                   </div>
-                  {canLeaveActive ? (
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: leaving ? 1 : 1.02 }}
-                      whileTap={{ scale: leaving ? 1 : 0.97 }}
-                      onClick={handleLeaveActiveGroup}
-                      disabled={leaving}
-                      className={`rounded-full border px-4 py-1 text-xs font-semibold transition ${
-                        leaving ? "cursor-not-allowed border-red-200 text-red-300" : "border-red-200 text-red-600 hover:bg-red-50"
-                      }`}
-                    >
-                      {leaving ? "Leaving..." : "Leave group"}
-                    </motion.button>
-                  ) : (
-                    <span className="text-xs text-gray-400">You manage this space</span>
-                  )}
                 </div>
               </header>
               <div className="flex-1 overflow-hidden">
@@ -392,7 +482,99 @@ export default function MessagesTab({ initialGroupId = null }) {
             </div>
           )}
         </div>
+        {showGroupInfo && activeThread && (
+          <aside className="rounded-3xl border border-white/70 bg-white/90 shadow-xl space-y-6 p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold uppercase tracking-[0.3em] text-gray-500">Group info</h3>
+                <p className="text-xs text-gray-400">{activeMemberCount} member{activeMemberCount === 1 ? "" : "s"}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGroupInfo(false)}
+                className="rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-500 transition hover:border-indigo-200 hover:text-indigo-600"
+              >
+                Close
+              </button>
+            </div>
+            <div className="space-y-3">
+              <p className="text-base font-semibold text-gray-900">{activeThread.name}</p>
+              {activeThread.description ? (
+                <p className="text-sm leading-relaxed text-gray-600">{activeThread.description}</p>
+              ) : null}
+              <div className="space-y-1 text-xs text-gray-500">
+                {activeThread.baseLocation ? (
+                  <p>{(activeThread.baseLocation || "Hybrid").trim()}</p>
+                ) : null}
+                {activeThread.cadence ? <p>Cadence: {activeThread.cadence}</p> : null}
+              </div>
+              {Array.isArray(activeThread.tags) && activeThread.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 text-xs text-indigo-500">
+                  {activeThread.tags.map((tag) => (
+                    <span key={tag} className="rounded-full bg-indigo-50 px-3 py-1">
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-[0.3em] text-gray-500">Members</h4>
+              {membersLoading ? (
+                <p className="text-sm text-gray-500">Loading members...</p>
+              ) : membersError ? (
+                <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-500">{membersError}</p>
+              ) : memberIdsForActive.length === 0 ? (
+                <p className="text-sm text-gray-500">No members listed yet.</p>
+              ) : (
+                <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                  {memberIdsForActive.map((memberId) => {
+                    const profile = memberProfiles[memberId];
+                    const displayName =
+                      profile?.name || (memberId === currentUserId ? "You" : "Community member");
+                    const subtitle =
+                      profile?.tagline ||
+                      profile?.currentCity ||
+                      profile?.email ||
+                      (memberId === currentUserId ? "Tap to view your profile" : "Tap to view profile");
+                    const roleLabel =
+                      memberId === activeThread.ownerId
+                        ? "Owner"
+                        : activeThread.adminIds?.includes(memberId)
+                        ? "Admin"
+                        : null;
+                    const avatar = profile?.photoURL || "/pics/1.jpg";
+                    return (
+                      <button
+                        key={memberId}
+                        type="button"
+                        onClick={() => handleViewProfile(memberId)}
+                        className="group w-full text-left"
+                      >
+                        <div className="flex items-center gap-3 rounded-2xl border border-transparent bg-white/80 px-3 py-2 transition hover:border-indigo-200 hover:bg-indigo-50">
+                          <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-full bg-indigo-100">
+                            <Image src={avatar} alt={displayName} fill sizes="40px" className="object-cover" />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-gray-800">{displayName}</p>
+                            <p className="truncate text-xs text-gray-500">{subtitle}</p>
+                          </div>
+                          {roleLabel && (
+                            <span className="rounded-full bg-indigo-100 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-indigo-600">
+                              {roleLabel}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </aside>
+        )}
       </div>
     </section>
   );
 }
+
