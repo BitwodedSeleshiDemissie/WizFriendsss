@@ -19,88 +19,138 @@ const dateOptions = [
   { label: "This Weekend", value: "Weekend" },
 ];
 
+const WELLNESS_ART = [
+  "/category-art/wellness/1600x1000_Rimini-Wellness.jpg",
+  "/category-art/wellness/4-3.png",
+  "/category-art/wellness/a22324c8-859e-420a-8fdf-170b5b461af6.webp",
+  "/category-art/wellness/alula-wellness-festival-article-card-desktop.jpg",
+  "/category-art/wellness/images.jpeg",
+];
+
+const FOOD_AND_DRINK_ART = [
+  "/category-art/food-drink/EmptyName_62_9c9de251-eba2-4a3a-b7e3-fdfcf1e59a3c.jpg",
+  "/category-art/food-drink/How-to-Throw-an-Aperitivo-Hour-Like-Italians-FT-BLOG0425-01-a16d0a64c3c24291a56e1d4f1dab5bb6.jpg",
+  "/category-art/food-drink/images-1.jpeg",
+  "/category-art/food-drink/images.jpeg",
+  "/category-art/food-drink/tofd-2.webp",
+];
+
+const OUTDOORS_ART = [
+  "/category-art/outdoors/2024OutdoorAdventureCourse-Aframe2024-2880x1286jpg-640w.webp",
+  "/category-art/outdoors/a019f_segnavie.jpg",
+  "/category-art/outdoors/axe-throwing-header.webp",
+  "/category-art/outdoors/images-2.jpeg",
+  "/category-art/outdoors/images.jpeg",
+];
+
+const ARTS_AND_CULTURE_ART = [
+  "/category-art/arts-culture/cultural-festivals-in-greece-hero.jpg",
+  "/category-art/arts-culture/GettyImages-530374398-5a5e624ac7822d00378b5931.jpg",
+  "/category-art/arts-culture/id14604382-CZ_2129-scaled.webp",
+  "/category-art/arts-culture/images-1.jpeg",
+  "/category-art/arts-culture/images.jpeg",
+];
+
+const LEARNING_ART = [
+  "/category-art/learning/eea-hub-workshops.jpg",
+  "/category-art/learning/images-1.jpeg",
+  "/category-art/learning/images.jpeg",
+  "/category-art/learning/its-arcademy-courses-workshops-landscape.jpg",
+  "/category-art/learning/litalianoporticando-1024x768.webp",
+];
+
+const VOLUNTEERING_ART = [
+  "/category-art/volunteering/10r2a0762-1-2444x2000.jpg",
+  "/category-art/volunteering/adobestock_128735726.jpeg",
+  "/category-art/volunteering/images.jpeg",
+  "/category-art/volunteering/multi-ethnic-young-people-team-600nw-2205868095.webp",
+  "/category-art/volunteering/volunteer-abroad-in-italy-ivhq-rome-community-support.avif",
+];
+
+const NETWORKING_ART = [
+  "/category-art/networking/download.jpeg",
+  "/category-art/networking/images-1.jpeg",
+  "/category-art/networking/images.jpeg",
+  "/category-art/networking/Networking_Skills_see3dz.avif",
+  "/category-art/networking/Progetto-senza-titolo-1-1024x740.jpg",
+];
+
 const CATEGORY_ILLUSTRATIONS = {
-  Wellness: [
-    "/category-art/wellness/wellness-1.svg",
-    "/category-art/wellness/wellness-2.svg",
-    "/category-art/wellness/wellness-3.svg",
-    "/category-art/wellness/wellness-4.svg",
-    "/category-art/wellness/wellness-5.svg",
-    "/category-art/wellness/wellness-6.svg",
-    "/category-art/wellness/wellness-7.svg",
-    "/category-art/wellness/wellness-8.svg",
-  ],
-  "Food & Drink": [
-    "/category-art/food-drink/food-1.svg",
-    "/category-art/food-drink/food-2.svg",
-    "/category-art/food-drink/food-3.svg",
-    "/category-art/food-drink/food-4.svg",
-    "/category-art/food-drink/food-5.svg",
-    "/category-art/food-drink/food-6.svg",
-    "/category-art/food-drink/food-7.svg",
-    "/category-art/food-drink/food-8.svg",
-  ],
-  "Outdoors & Adventure": [
-    "/category-art/outdoors/outdoors-1.svg",
-    "/category-art/outdoors/outdoors-2.svg",
-    "/category-art/outdoors/outdoors-3.svg",
-    "/category-art/outdoors/outdoors-4.svg",
-    "/category-art/outdoors/outdoors-5.svg",
-    "/category-art/outdoors/outdoors-6.svg",
-    "/category-art/outdoors/outdoors-7.svg",
-    "/category-art/outdoors/outdoors-8.svg",
-  ],
-  "Arts & Culture": [
-    "/category-art/arts-culture/arts-1.svg",
-    "/category-art/arts-culture/arts-2.svg",
-    "/category-art/arts-culture/arts-3.svg",
-    "/category-art/arts-culture/arts-4.svg",
-    "/category-art/arts-culture/arts-5.svg",
-    "/category-art/arts-culture/arts-6.svg",
-    "/category-art/arts-culture/arts-7.svg",
-    "/category-art/arts-culture/arts-8.svg",
-  ],
-  "Sports & Fitness": [
-    "/category-art/sports-fitness/sports-1.svg",
-    "/category-art/sports-fitness/sports-2.svg",
-    "/category-art/sports-fitness/sports-3.svg",
-    "/category-art/sports-fitness/sports-4.svg",
-    "/category-art/sports-fitness/sports-5.svg",
-    "/category-art/sports-fitness/sports-6.svg",
-    "/category-art/sports-fitness/sports-7.svg",
-    "/category-art/sports-fitness/sports-8.svg",
-  ],
-  "Learning & Workshops": [
-    "/category-art/learning/learning-1.svg",
-    "/category-art/learning/learning-2.svg",
-    "/category-art/learning/learning-3.svg",
-    "/category-art/learning/learning-4.svg",
-    "/category-art/learning/learning-5.svg",
-    "/category-art/learning/learning-6.svg",
-    "/category-art/learning/learning-7.svg",
-    "/category-art/learning/learning-8.svg",
-  ],
-  Volunteering: [
-    "/category-art/volunteering/volunteer-1.svg",
-    "/category-art/volunteering/volunteer-2.svg",
-    "/category-art/volunteering/volunteer-3.svg",
-    "/category-art/volunteering/volunteer-4.svg",
-    "/category-art/volunteering/volunteer-5.svg",
-    "/category-art/volunteering/volunteer-6.svg",
-    "/category-art/volunteering/volunteer-7.svg",
-    "/category-art/volunteering/volunteer-8.svg",
-  ],
-  "Networking & Professional": [
-    "/category-art/networking/networking-1.svg",
-    "/category-art/networking/networking-2.svg",
-    "/category-art/networking/networking-3.svg",
-    "/category-art/networking/networking-4.svg",
-    "/category-art/networking/networking-5.svg",
-    "/category-art/networking/networking-6.svg",
-    "/category-art/networking/networking-7.svg",
-    "/category-art/networking/networking-8.svg",
-  ],
+  Wellness: WELLNESS_ART,
+  "Active & Wellness": [...WELLNESS_ART, ...OUTDOORS_ART],
+  "Food & Drink": FOOD_AND_DRINK_ART,
+  "Outdoors & Adventure": OUTDOORS_ART,
+  "Arts & Culture": ARTS_AND_CULTURE_ART,
+  "Sports & Fitness": OUTDOORS_ART,
+  "Learning & Workshops": LEARNING_ART,
+  "Tech & Learning": LEARNING_ART,
+  Volunteering: VOLUNTEERING_ART,
+  "Social Impact": VOLUNTEERING_ART,
+  "Networking & Professional": NETWORKING_ART,
+  "Professional & Networking": NETWORKING_ART,
+  "Social & Connection": [...NETWORKING_ART, ...ARTS_AND_CULTURE_ART],
+  Community: [...ARTS_AND_CULTURE_ART, ...NETWORKING_ART],
+  Study: LEARNING_ART,
+  Education: LEARNING_ART,
+  "Study Group": LEARNING_ART,
 };
+
+const CATEGORY_KEYWORD_RULES = [
+  {
+    keywords: ["wellness", "active", "health", "fitness", "sport", "movement"],
+    art: [...WELLNESS_ART, ...OUTDOORS_ART],
+  },
+  {
+    keywords: ["food", "drink", "dinner", "brunch", "culinary", "chef", "cook", "taste"],
+    art: FOOD_AND_DRINK_ART,
+  },
+  {
+    keywords: ["outdoor", "advent", "trail", "hike", "run", "bike", "climb", "nature"],
+    art: OUTDOORS_ART,
+  },
+  {
+    keywords: ["art", "culture", "music", "creative", "film", "gallery", "dance"],
+    art: ARTS_AND_CULTURE_ART,
+  },
+  {
+    keywords: ["learn", "study", "workshop", "class", "tech", "education", "brainstorm", "course"],
+    art: LEARNING_ART,
+  },
+  {
+    keywords: ["volunteer", "impact", "charity", "donate", "service", "community"],
+    art: VOLUNTEERING_ART,
+  },
+  {
+    keywords: ["network", "professional", "career", "business", "meetup", "connection", "social"],
+    art: NETWORKING_ART,
+  },
+];
+
+const DEFAULT_CATEGORY_ART = [
+  ...ARTS_AND_CULTURE_ART,
+  ...NETWORKING_ART,
+  ...WELLNESS_ART,
+];
+
+function getCategoryIllustrations(categoryLabel) {
+  const trimmed = categoryLabel?.trim();
+
+  if (trimmed && CATEGORY_ILLUSTRATIONS[trimmed]) {
+    return CATEGORY_ILLUSTRATIONS[trimmed];
+  }
+
+  const lowered = trimmed?.toLowerCase();
+  if (lowered) {
+    const match = CATEGORY_KEYWORD_RULES.find(({ keywords }) =>
+      keywords.some((keyword) => lowered.includes(keyword))
+    );
+    if (match) {
+      return match.art;
+    }
+  }
+
+  return DEFAULT_CATEGORY_ART;
+}
 
 function matchesDateFilter(eventDate, filter) {
   if (filter === "Any") return true;
@@ -259,10 +309,11 @@ export default function ActivitiesNearMeTab() {
           const waitlisted = waitlistedActivities.includes(activity.id);
           const saved = savedActivities.includes(activity.id);
           const eventDate = new Date(activity.dateTime);
-          const categoryKey = activity.category;
-          const counter = categoryCounters[categoryKey] ?? 0;
-          categoryCounters[categoryKey] = counter + 1;
-          const artworkOptions = CATEGORY_ILLUSTRATIONS[categoryKey] ?? [];
+          const categoryKey = activity.category ?? "";
+          const counterKey = categoryKey || "__unknown__";
+          const counter = categoryCounters[counterKey] ?? 0;
+          categoryCounters[counterKey] = counter + 1;
+          const artworkOptions = getCategoryIllustrations(categoryKey);
           const artworkSrc = artworkOptions.length > 0 ? artworkOptions[counter % artworkOptions.length] : null;
 
           return (
@@ -369,3 +420,4 @@ export default function ActivitiesNearMeTab() {
     </section>
   );
 }
+
