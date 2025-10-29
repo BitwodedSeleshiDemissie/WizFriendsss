@@ -901,12 +901,14 @@ export function AppDataProvider({ children }) {
       const trimmed = (content ?? "").trim();
       if (!trimmed) return null;
 
+      const senderName = userProfile?.name || displayName || "You";
+
       if (!supabase) {
         const fallback = normaliseGroupMessage({
           id: generateId(),
           groupId,
           senderId: userId,
-          senderName: userProfile?.name || displayName || "You",
+          senderName: senderName,
           content: trimmed,
           createdAt: new Date().toISOString(),
           system: false,
@@ -923,6 +925,7 @@ export function AppDataProvider({ children }) {
         .insert({
           group_id: groupId,
           sender_id: userId,
+          sender_name: senderName,
           content: trimmed,
           system: false,
         })

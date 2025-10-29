@@ -88,6 +88,20 @@ export default function MessagesTab({ initialGroupId = null }) {
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+  const [showMobileChat, setShowMobileChat] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const updateViewport = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => {
+      window.removeEventListener("resize", updateViewport);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof subscribeToGroupMessages !== "function") return undefined;
@@ -130,6 +144,16 @@ export default function MessagesTab({ initialGroupId = null }) {
   useEffect(() => {
     setShowGroupInfo(false);
   }, [activeGroupId]);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setShowMobileChat(false);
+      return;
+    }
+    if (!activeGroupId) {
+      setShowMobileChat(false);
+    }
+  }, [isMobile, activeGroupId]);
 
   const activeThread = activeGroupId
     ? threads.find((thread) => thread.id === activeGroupId) ?? null
@@ -221,6 +245,19 @@ export default function MessagesTab({ initialGroupId = null }) {
     setDrafts((previous) => ({ ...previous, [activeGroupId]: value }));
   };
 
+  const handleSelectThread = (groupId) => {
+    setActiveGroupId(groupId);
+    if (isMobile) {
+      setShowMobileChat(true);
+    }
+  };
+
+  const handleBackToThreads = () => {
+    if (!isMobile) return;
+    setShowMobileChat(false);
+    setShowGroupInfo(false);
+  };
+
   const handleSend = async () => {
     if (!activeGroupId) return;
     const raw = drafts[activeGroupId] ?? "";
@@ -278,11 +315,13 @@ export default function MessagesTab({ initialGroupId = null }) {
   const layoutColumns = showGroupInfo && activeThread
     ? "lg:grid-cols-[360px_minmax(0,1fr)_320px]"
     : "lg:grid-cols-[360px_minmax(0,1fr)]";
+  const asideVisibility = isMobile && showMobileChat ? "hidden" : "flex";
+  const chatVisibility = isMobile && !showMobileChat ? "hidden" : "flex";
 
   return (
     <section className="flex flex-col gap-4">
       <div className={`grid min-h-[520px] grid-cols-1 ${layoutColumns} overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm`}>
-        <aside className="flex flex-col border-b border-gray-200 bg-gray-50 lg:border-b-0 lg:border-r">
+        <aside className={`${asideVisibility} flex-col border-b border-gray-200 bg-gray-50 lg:border-b-0 lg:border-r`}>
           <div className="flex items-center justify-between px-4 py-4">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Chats</h2>
@@ -334,7 +373,7 @@ export default function MessagesTab({ initialGroupId = null }) {
                       type="button"
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
-                      onClick={() => setActiveGroupId(thread.id)}
+                      onClick={() => handleSelectThread(thread.id)}
                       className={`flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
                         active ? "bg-blue-50" : "hover:bg-gray-100"
                       }`}
@@ -364,11 +403,21 @@ export default function MessagesTab({ initialGroupId = null }) {
             )}
           </div>
         </aside>
-        <div className="flex flex-col bg-white">
+        <div className={`${chatVisibility} flex-col bg-white`}>
           {activeThread ? (
             <>
               <header className="flex flex-col gap-4 border-b border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
+                  {isMobile && showMobileChat && (
+                    <button
+                      type="button"
+                      onClick={handleBackToThreads}
+                      className="mr-1 flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-gray-500"
+                      aria-label="Back to chats"
+                    >
+                      &larr;
+                    </button>
+                  )}
                   <div className="relative h-12 w-12 overflow-hidden rounded-full bg-gray-200">
                     <Image
                       src={activeThread.image || "/pics/1.jpg"}
@@ -428,6 +477,9 @@ export default function MessagesTab({ initialGroupId = null }) {
                     const key = `${message.id}-${message.createdAt}`;
                     const isOwn = message.senderId && message.senderId === currentUserId;
                     const isSystem = message.system;
+                    const senderDisplayName = message.senderId === currentUserId
+                      ? "You"
+                      : message.senderName || memberProfiles[message.senderId]?.name || "Member";
                     return (
                       <motion.div
                         key={key}
@@ -447,11 +499,13 @@ export default function MessagesTab({ initialGroupId = null }) {
                               isOwn ? "bg-blue-500 text-white" : "bg-white text-gray-800"
                             }`}
                           >
-                            {!isOwn && (
-                              <p className="mb-1 text-xs font-semibold text-gray-600">
-                                {message.senderName || "Member"}
-                              </p>
-                            )}
+                            <p
+                              className={`mb-1 text-xs font-semibold ${
+                                isOwn ? "text-blue-100" : "text-gray-600"
+                              }`}
+                            >
+                              {senderDisplayName}
+                            </p>
                             <p className="whitespace-pre-wrap">{message.content}</p>
                             <p
                               className={`mt-2 text-[11px] ${
