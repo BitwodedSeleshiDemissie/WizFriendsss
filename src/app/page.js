@@ -11,21 +11,18 @@ const stats = [
   { value: "48h", label: "Avg. time-to-first event" },
 ];
 
-const features = [
+const differentiators = [
   {
-    title: "Activities Near Me",
-    description: "GPS-tailored suggestions with real-world RSVPs, pricing, and host info so newcomers can say yes faster.",
-    icon: "📍",
+    title: "Immediate social traction",
+    description: "Launch curated activities with RSVPs, pricing, and verified hosts ready to welcome newcomers.",
   },
   {
-    title: "AI Brainstorm Studio",
-    description: "Turn prompts into event ideas, rally community endorsements, and auto-launch high-signal experiences.",
-    icon: "💡",
+    title: "AI-powered programming",
+    description: "Turn prompts into launch-ready experiences and reuse the playbooks that resonate in your cities.",
   },
   {
-    title: "Community Groups",
-    description: "Persistent spaces with notices, polls, and shared cadences that empower admins to keep communities aligned.",
-    icon: "🤝",
+    title: "Proof you can report on",
+    description: "Track endorsements, sentiment, and retention so partners see the impact of every gathering.",
   },
 ];
 
@@ -46,41 +43,7 @@ const testimonials = [
   },
 ];
 
-const belongingInsights = [
-  {
-    stat: "1 in 3",
-    headline: "international students report deep loneliness in their first year abroad",
-    source: "UNESCO, 2023",
-  },
-  {
-    stat: "29%",
-    headline: "higher risk of heart disease is linked to prolonged social disconnection",
-    source: "U.S. Surgeon General, 2023",
-  },
-  {
-    stat: "32%",
-    headline: "increase in stroke risk shows how costly isolation can be for wellbeing",
-    source: "U.S. Surgeon General, 2023",
-  },
-];
 
-const missionPillars = [
-  {
-    title: "Shared rituals",
-    description:
-      "Programs and activities designed to spark recurring gatherings that feel natural in every city.",
-  },
-  {
-    title: "Trusted hosts",
-    description:
-      "Verified leaders, clear safety signals, and tooling that give newcomers confidence to say yes.",
-  },
-  {
-    title: "Living insights",
-    description:
-      "Impact dashboards that surface sentiment, attendance, and community health in real time.",
-  },
-];
 
 export default function LandingPage() {
   return (
@@ -157,205 +120,119 @@ export default function LandingPage() {
       </section>
 
       {/* Product Overview */}
-      <section id="product" className="py-24 bg-white">
-        <div className="max-w-6xl mx-auto px-6 lg:px-12 grid md:grid-cols-[1.2fr,0.8fr] gap-12 items-center">
-          <div className="space-y-6">
+      <section id="product" className="py-20 bg-white">
+        <div className="max-w-5xl mx-auto px-6 lg:px-12 space-y-8">
+          <div className="space-y-4 text-center md:text-left">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">
-              Everything you need to run real-world community programs.
+              Less explaining, more belonging.
             </h2>
-            <p className="text-gray-600 text-base sm:text-lg">
-              WizFriends is purpose-built for social discovery. We orchestrate event discovery, communal ideation,
-              and group continuity so you can focus on storytelling and safety.
+            <p className="text-base sm:text-lg text-gray-600">
+              WizFriends gives teams a single launchpad for meaningful experiences so every newcomer sees what to join next without a lengthy onboarding.
             </p>
-            <div className="space-y-4">
-              {features.map((feature) => (
-                <div
-                  key={feature.title}
-                  className="flex gap-4 bg-indigo-50/60 border border-indigo-100 rounded-3xl p-5"
-                >
-                  <div className="text-3xl">{feature.icon}</div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{feature.title}</h3>
-                    <p className="text-sm text-gray-600">{feature.description}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-4">
-              <Link
-                href="/app?tab=brainstorm"
-                className="text-sm font-semibold text-indigo-600 hover:text-pink-500 transition"
-              >
-                Demo the Brainstorm flow →
-              </Link>
-              <Link
-                href="/app?tab=groups"
-                className="text-sm font-semibold text-indigo-600 hover:text-pink-500 transition"
-              >
-                See groups in action →
-              </Link>
-            </div>
           </div>
-          <div className="relative">
-            <div className="absolute -inset-4 bg-gradient-to-tr from-indigo-200 via-white to-pink-200 rounded-3xl blur-2xl opacity-40" />
-            <div className="relative bg-white rounded-3xl shadow-2xl border border-white overflow-hidden">
-              <Image
-                src="/pics/4.jpg"
-                alt="WizFriends product preview"
-                width={900}
-                height={600}
-                sizes="(max-width: 1024px) 100vw, 45vw"
-                className="object-cover"
-              />
-            </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {differentiators.map((item) => (
+              <div
+                key={item.title}
+                className="rounded-3xl border border-indigo-100 bg-indigo-50/70 p-6 text-left"
+              >
+                <h3 className="text-lg font-semibold text-gray-900">{item.title}</h3>
+                <p className="mt-2 text-sm text-gray-600">{item.description}</p>
+              </div>
+            ))}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4">
+            <Link
+              href="/app?tab=brainstorm"
+              className="text-sm font-semibold text-indigo-600 hover:text-pink-500 transition"
+            >
+              Demo the Brainstorm flow&nbsp;&rarr;
+            </Link>
+            <Link
+              href="/app?tab=groups"
+              className="text-sm font-semibold text-indigo-600 hover:text-pink-500 transition"
+            >
+              See groups in action&nbsp;&rarr;
+            </Link>
           </div>
         </div>
       </section>
-      {/* Our Story */}
-      <section id="about" className="relative py-28 overflow-hidden bg-gradient-to-br from-indigo-50 via-white to-pink-50">
-        <div className="absolute inset-0 -z-10">
-          <Image
-            src="/pics/com.jpg"
-            alt="People connecting across cultures"
-            fill
-            sizes="100vw"
-            className="object-cover opacity-20"
-          />
-          <div className="absolute inset-0 bg-gradient-to-br from-white via-indigo-50/80 to-pink-100/60" />
-        </div>
-        <div className="relative max-w-5xl mx-auto px-6 lg:px-12 space-y-10 text-center md:text-left">
+      {/* About */}
+      <section id="about" className="py-20 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-800 text-white">
+        <div className="max-w-4xl mx-auto px-6 lg:px-12 space-y-6 text-center">
           <motion.span
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.4 }}
             transition={{ duration: 0.5 }}
-            className="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-500"
+            className="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-200"
           >
-            Our Story
+            About WizFriends
           </motion.span>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.4 }}
             transition={{ delay: 0.1, duration: 0.6 }}
-            className="text-3xl sm:text-4xl md:text-5xl font-bold text-gray-900"
+            className="text-3xl sm:text-4xl md:text-5xl font-bold text-white"
           >
-            We built WizFriends so belonging travels with you.
+            Belong faster in every new city.
           </motion.h2>
-          <motion.div
+          <motion.p
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.4 }}
             transition={{ delay: 0.2, duration: 0.6 }}
-            className="space-y-4 text-base sm:text-lg text-gray-700"
+            className="text-base sm:text-lg text-indigo-100"
           >
-            <p>
-              WizFriends was born from a feeling shared by millions - the ache of being far from home, searching for belonging in an unfamiliar place.
-              Whether you&apos;re an international student, a young professional, or someone starting over, connection should feel effortless, human, and real.
-            </p>
-            <p>
-              We started by listening to relocated teams, city newcomer offices, and campus directors struggling to build lasting circles.
-              Those conversations shaped every ritual inside the product.
-            </p>
+            WizFriends pairs vetted hosts with the rituals, prompts, and insights that make newcomers feel like insiders without weeks of hand-holding.
+          </motion.p>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ delay: 0.25, duration: 0.6 }}
+          >
+            <ul className="grid gap-3 sm:grid-cols-3 text-left text-sm text-indigo-100">
+              {[
+                "Curated activities that make the first hello effortless.",
+                "Safety signals that keep hosts accountable and trusted.",
+                "Impact snapshots leaders use to prove belonging matters.",
+              ].map((item) => (
+                <li
+                  key={item}
+                  className="rounded-2xl border border-white/15 bg-white/10 p-4 leading-relaxed"
+                >
+                  {item}
+                </li>
+              ))}
+            </ul>
           </motion.div>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.4 }}
             transition={{ delay: 0.3, duration: 0.6 }}
-            className="grid gap-6 sm:grid-cols-3"
+            className="flex flex-col sm:flex-row gap-4 justify-center"
           >
-            {belongingInsights.map((insight) => (
-              <div
-                key={insight.stat}
-                className="rounded-3xl bg-white/80 backdrop-blur border border-white/70 shadow-sm p-6 text-left"
-              >
-                <p className="text-3xl font-bold text-indigo-600">{insight.stat}</p>
-                <p className="mt-3 text-sm text-gray-600">{insight.headline}</p>
-                <p className="mt-4 text-xs uppercase tracking-[0.2em] text-indigo-400">{insight.source}</p>
-              </div>
-            ))}
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Belonging Challenge */}
-      <section className="py-24 bg-white">
-        <div className="max-w-6xl mx-auto px-6 lg:px-12 grid lg:grid-cols-[1.1fr,0.9fr] gap-16 items-center">
-          <div className="space-y-6">
-            <span className="text-sm font-semibold uppercase tracking-[0.25em] text-indigo-500">Why we built it</span>
-            <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900">A global belonging gap worth closing.</h3>
-            <div className="space-y-4 text-base sm:text-lg text-gray-600">
-              <p>
-                According to UNESCO, nearly 1 in 3 international students experience deep loneliness within their first year abroad.
-                Professionals and families relocating for work or study voice the same quiet disconnection.
-              </p>
-              <p>
-                The U.S. Surgeon General&apos;s 2023 advisory named loneliness a public health crisis, linking isolation to a 29% higher risk of heart disease and a 32% higher risk of stroke.
-                Belonging is not a nice-to-have; it is protective.
-              </p>
-              <p>
-                WizFriends gives newcomers a homebase for those first weeks - surfacing trusted hosts, rituals, and community insights so tentative hellos become recurring gatherings.
-              </p>
-            </div>
-          </div>
-          <div className="relative">
-            <div className="absolute -inset-4 bg-gradient-to-tr from-indigo-200 via-white to-pink-200 rounded-3xl blur-3xl opacity-50" />
-            <div className="relative overflow-hidden rounded-3xl border border-indigo-100 shadow-2xl">
-              <Image
-                src="/pics/com.jpg"
-                alt="People building community together"
-                width={720}
-                height={540}
-                sizes="(max-width: 1024px) 100vw, 44vw"
-                className="h-full w-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/20 to-pink-500/20" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Mission */}
-      <section className="py-24 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-800 text-white">
-        <div className="max-w-6xl mx-auto px-6 lg:px-12 space-y-12">
-          <div className="max-w-3xl space-y-4">
-            <span className="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-200">Our mission</span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">We exist to help people rediscover belonging.</h2>
-            <p className="text-indigo-100 text-base sm:text-lg">
-              We connect people through shared interests, authentic communities, and real human stories.
-              WizFriends is more than an app - it is a movement toward a connected, compassionate world.
-            </p>
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            {missionPillars.map((pillar) => (
-              <div
-                key={pillar.title}
-                className="rounded-3xl border border-white/15 bg-white/10 p-6 shadow-xl"
-              >
-                <h3 className="text-lg font-semibold text-white">{pillar.title}</h3>
-                <p className="mt-3 text-sm text-indigo-100">{pillar.description}</p>
-              </div>
-            ))}
-          </div>
-          <div className="flex flex-col sm:flex-row gap-4">
             <Link
               href="/auth/signup"
               className="inline-flex items-center justify-center rounded-full bg-white text-indigo-900 font-semibold px-8 py-3 shadow-lg hover:shadow-xl transition"
             >
-              Join the movement
+              Get started
             </Link>
             <Link
-              href="/app"
+              href="mailto:hello@wizfriends.app"
               className="inline-flex items-center justify-center rounded-full border border-white/60 text-white font-semibold px-8 py-3 hover:bg-white hover:text-indigo-900 transition"
             >
-              See how WizFriends works
+              Book a walkthrough
             </Link>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Testimonials */}
+
 
       <section className="py-24 bg-gradient-to-b from-white to-indigo-50">
         <div className="max-w-6xl mx-auto px-6 lg:px-12">
