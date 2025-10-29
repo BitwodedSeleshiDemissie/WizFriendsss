@@ -63,11 +63,9 @@ export default function Navbar() {
   }, []);
 
   const navLinks = [
-    { label: "Product", href: "/#product" },
     { label: "Experience", href: "/app" },
     { label: "Brainstorm", href: "/app?tab=brainstorm" },
     { label: "Groups", href: "/app?tab=groups" },
-    { label: "About", href: "/about" },
   ];
 
   return (
