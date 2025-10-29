@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAppData } from "../../context/AppDataContext";
 
 function formatNotificationTime(notification) {
@@ -20,11 +20,27 @@ function formatNotificationTime(notification) {
   });
 }
 
+function formatLogTime(date) {
+  if (!(date instanceof Date) || Number.isNaN(date.getTime())) return "Recent";
+  const today = new Date();
+  const sameDay = date.toDateString() === today.toDateString();
+  if (sameDay) {
+    return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  }
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) {
+    return "Yesterday";
+  }
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
 export default function ProfileTab() {
   const {
     userProfile: user,
     activities,
     groups,
+    ideas,
     joinedActivities,
     joinedGroups,
     savedActivities,
@@ -37,6 +53,7 @@ export default function ProfileTab() {
   const [photoPreview, setPhotoPreview] = useState("");
   const [uploadError, setUploadError] = useState("");
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [showActivityLog, setShowActivityLog] = useState(false);
   const fileInputRef = useRef(null);
 
   const photoSource = photoPreview || user.photoURL || "/pics/1.jpg";
@@ -44,6 +61,12 @@ export default function ProfileTab() {
   const displayTagline = user.tagline || "Let's build community together.";
   const interests = Array.isArray(user.interests) ? user.interests.filter(Boolean) : [];
   const firstName = (user.name || "You").split(" ")[0];
+
+  useEffect(() => {
+    if (photoPreview && user.photoURL && photoPreview !== user.photoURL) {
+      setPhotoPreview("");
+    }
+  }, [photoPreview, user.photoURL]);
 
   const handlePhotoButtonClick = () => {
     fileInputRef.current?.click();
@@ -94,6 +117,84 @@ export default function ProfileTab() {
   );
 
   const ideasEndorsed = useMemo(() => ideaEndorsements.length, [ideaEndorsements]);
+
+  const activityLogEntries = useMemo(() => {
+    const entries = [];
+    const userId = user.id || user.uid || null;
+    const ideaList = Array.isArray(ideas) ? ideas : [];
+
+    joined.forEach((activity) => {
+      entries.push({
+        id: `joined-${activity.id}`,
+        kind: "Joined activity",
+        title: activity.title,
+        detail: activity.location || activity.city || "",
+        timestamp: activity.dateTime || activity.createdAt || activity.updatedAt || null,
+      });
+    });
+
+    favourites.forEach((activity) => {
+      entries.push({
+        id: `saved-${activity.id}`,
+        kind: "Saved activity",
+        title: activity.title,
+        detail: activity.category || activity.city || "",
+        timestamp: activity.updatedAt || activity.dateTime || null,
+      });
+    });
+
+    myGroups.forEach((group) => {
+      entries.push({
+        id: `group-${group.id}`,
+        kind: "Joined group",
+        title: group.name,
+        detail: group.baseLocation || group.cadence || "",
+        timestamp: group.createdAt || group.updatedAt || null,
+      });
+    });
+
+    ideaList
+      .filter((idea) => idea.createdBy && idea.createdBy === userId)
+      .forEach((idea) => {
+        entries.push({
+          id: `idea-${idea.id}`,
+          kind: "Proposed idea",
+          title: idea.title,
+          detail: idea.status ? `Status: ${idea.status}` : "",
+          timestamp: idea.createdAt || idea.updatedAt || null,
+        });
+      });
+
+    ideaList
+      .filter((idea) => ideaEndorsements.includes(idea.id) && idea.createdBy !== userId)
+      .forEach((idea) => {
+        entries.push({
+          id: `endorsed-${idea.id}`,
+          kind: "Endorsed idea",
+          title: idea.title,
+          detail: idea.category || "",
+          timestamp: idea.updatedAt || idea.createdAt || null,
+        });
+      });
+
+    return entries
+      .map((entry, index) => {
+        const dt = entry.timestamp ? new Date(entry.timestamp) : null;
+        return {
+          ...entry,
+          timestamp: dt && !Number.isNaN(dt.getTime()) ? dt : null,
+          order: index,
+        };
+      })
+      .sort((a, b) => {
+        if (a.timestamp && b.timestamp) {
+          return b.timestamp.getTime() - a.timestamp.getTime();
+        }
+        if (a.timestamp) return -1;
+        if (b.timestamp) return 1;
+        return b.order - a.order;
+      });
+  }, [favourites, ideaEndorsements, ideas, joined, myGroups, user.id, user.uid]);
 
   if (loading) {
     return (
@@ -158,7 +259,20 @@ export default function ProfileTab() {
                     isUploadingPhoto ? "opacity-70 cursor-not-allowed" : ""
                   }`}
                 >
-                  {isUploadingPhoto ? "Uploading..." : "Upload photo"}
+                  {isUploadingPhoto ? "Uploading..." : "Update photo"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowActivityLog((previous) => !previous)}
+                  className={`inline-flex items-center justify-center gap-2 rounded-full border px-5 py-2 text-sm font-semibold transition ${
+                    showActivityLog
+                      ? "border-white bg-white/15 text-white shadow"
+                      : "border-white/70 text-white/90 hover:bg-white/10"
+                  }`}
+                  aria-expanded={showActivityLog}
+                  aria-controls="activity-log"
+                >
+                  {showActivityLog ? "Hide log" : "Activity log"}
                 </button>
                 <a
                   href="#profile-settings"
@@ -195,11 +309,18 @@ export default function ProfileTab() {
       </div>
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard label="Activities joined" value={joinedActivities.length} icon="ðŸŽ‰" />
-        <StatCard label="Groups" value={joinedGroups.length} icon="ðŸ¤" />
-        <StatCard label="Ideas endorsed" value={ideasEndorsed} icon="ðŸ’¡" />
-        <StatCard label="Upcoming invites" value={notifications.length} icon="ðŸ””" />
+        <StatCard label="Activities joined" value={joinedActivities.length} icon={<span aria-hidden="true">📅</span>} />
+        <StatCard label="Groups" value={joinedGroups.length} icon={<span aria-hidden="true">🤝</span>} />
+        <StatCard label="Ideas endorsed" value={ideasEndorsed} icon={<span aria-hidden="true">💡</span>} />
+        <StatCard label="Upcoming invites" value={notifications.length} icon={<span aria-hidden="true">📬</span>} />
       </div>
+
+      {showActivityLog ? (
+        <ActivityLogCard
+          entries={activityLogEntries}
+          onClose={() => setShowActivityLog(false)}
+        />
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 md:p-8 space-y-4">
@@ -389,6 +510,46 @@ function Section({ title, description, emptyHint, items, renderItem }) {
           ))
         )}
       </div>
+    </div>
+  );
+}
+
+function ActivityLogCard({ entries, onClose }) {
+  return (
+    <div id="activity-log" className="rounded-3xl border border-gray-100 bg-white shadow-xl p-6 md:p-8 space-y-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-lg font-semibold text-gray-900">Activity log</h3>
+          <p className="text-sm text-gray-500">Timeline of everything you've been up to recently.</p>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="self-start rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600"
+        >
+          Close log
+        </button>
+      </div>
+      {entries.length === 0 ? (
+        <p className="rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-500">
+          Your log is clear for now. Join an activity or endorse an idea to see it appear here.
+        </p>
+      ) : (
+        <ol className="space-y-3 text-sm text-gray-600">
+          {entries.map((entry) => (
+            <li key={entry.id} className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] text-indigo-500 font-semibold">{entry.kind}</p>
+                  <p className="text-base font-semibold text-gray-900">{entry.title}</p>
+                  {entry.detail ? <p className="text-xs text-gray-500 mt-1">{entry.detail}</p> : null}
+                </div>
+                <span className="text-xs text-gray-400 whitespace-nowrap">{formatLogTime(entry.timestamp)}</span>
+              </div>
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }
