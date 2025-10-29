@@ -26,6 +26,27 @@ const differentiators = [
   },
 ];
 
+const problemStats = [
+  {
+    stat: "1 in 3",
+    caption: "international students hit acute loneliness in year one abroad (UNESCO)",
+  },
+  {
+    stat: "29%",
+    caption: "higher heart-disease risk tied to isolation (US Surgeon General)",
+  },
+  {
+    stat: "6 weeks",
+    caption: "average time newcomers say it takes to feel settled without local support",
+  },
+];
+
+const missionHighlights = [
+  "Curated rituals that make the first hello effortless.",
+  "Safety signals so every gathering feels vetted and accountable.",
+  "Impact snapshots leaders share to prove belonging moves the needle.",
+];
+
 const testimonials = [
   {
     quote:
@@ -157,6 +178,38 @@ export default function LandingPage() {
           </div>
         </div>
       </section>
+      {/* Belonging Gap */}
+      <section className="py-16 bg-gradient-to-br from-white via-indigo-50 to-white">
+        <div className="max-w-5xl mx-auto px-6 lg:px-12 space-y-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-3 text-center md:text-left"
+          >
+            <span className="text-sm font-semibold uppercase tracking-[0.3em] text-indigo-500">The belonging gap</span>
+            <h2 className="text-2xl sm:text-3xl font-bold text-gray-900">The data says people drift when support lags.</h2>
+            <p className="text-base sm:text-lg text-gray-600">Without a structured welcome, newcomers burn weeks searching for community—and the numbers show the risk in every program.</p>
+          </motion.div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            {problemStats.map((item) => (
+              <motion.div
+                key={item.stat}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.4 }}
+                transition={{ duration: 0.6 }}
+                className="rounded-3xl border border-indigo-100 bg-white p-6 shadow-sm text-center sm:text-left"
+              >
+                <p className="text-3xl font-bold text-indigo-600">{item.stat}</p>
+                <p className="mt-3 text-sm text-gray-600">{item.caption}</p>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* About */}
       <section id="about" className="py-20 bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-800 text-white">
         <div className="max-w-4xl mx-auto px-6 lg:px-12 space-y-6 text-center">
@@ -176,7 +229,7 @@ export default function LandingPage() {
             transition={{ delay: 0.1, duration: 0.6 }}
             className="text-3xl sm:text-4xl md:text-5xl font-bold text-white"
           >
-            Belong faster in every new city.
+            Our mission: make belonging the default.
           </motion.h2>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -185,7 +238,7 @@ export default function LandingPage() {
             transition={{ delay: 0.2, duration: 0.6 }}
             className="text-base sm:text-lg text-indigo-100"
           >
-            WizFriends pairs vetted hosts with the rituals, prompts, and insights that make newcomers feel like insiders without weeks of hand-holding.
+            We help global teams, campuses, and city partners spin up trusted rituals so newcomers feel seen in their first week, not their sixth.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -194,11 +247,7 @@ export default function LandingPage() {
             transition={{ delay: 0.25, duration: 0.6 }}
           >
             <ul className="grid gap-3 sm:grid-cols-3 text-left text-sm text-indigo-100">
-              {[
-                "Curated activities that make the first hello effortless.",
-                "Safety signals that keep hosts accountable and trusted.",
-                "Impact snapshots leaders use to prove belonging matters.",
-              ].map((item) => (
+              {missionHighlights.map((item) => (
                 <li
                   key={item}
                   className="rounded-2xl border border-white/15 bg-white/10 p-4 leading-relaxed"
