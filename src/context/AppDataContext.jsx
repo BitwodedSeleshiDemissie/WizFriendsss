@@ -117,6 +117,28 @@ function ensureObject(value) {
   return {};
 }
 
+function normalizeProfileRow(row = {}, fallback = {}) {
+  const profile = {
+    ...fallback,
+    ...row,
+  };
+  profile.id = row.id ?? fallback.id ?? null;
+  profile.name = row.name ?? fallback.name ?? "";
+  profile.tagline = row.tagline ?? fallback.tagline ?? "";
+  profile.homeCity = row.homeCity ?? row.home_city ?? fallback.homeCity ?? "";
+  profile.currentCity = row.currentCity ?? row.current_city ?? fallback.currentCity ?? "";
+  profile.photoURL = row.photoURL ?? row.photo_url ?? fallback.photoURL ?? "";
+  profile.interests = ensureStringArray(row.interests ?? fallback.interests ?? []);
+  profile.profileCompletion = ensureNumber(
+    row.profileCompletion ?? row.profile_completion ?? fallback.profileCompletion ?? 60,
+    60
+  );
+  profile.createdAt = coerceIso(row.createdAt ?? row.created_at) ?? fallback.createdAt ?? new Date().toISOString();
+  profile.updatedAt = coerceIso(row.updatedAt ?? row.updated_at) ?? new Date().toISOString();
+  return profile;
+}
+
+
 function normaliseActivity(row) {
   if (!row) return null;
   const dateTime =
@@ -1931,6 +1953,99 @@ export function AppDataProvider({ children }) {
     return result;
   }, []);
 
+  const updateProfile = useCallback(
+    async (partialUpdates = {}) => {
+      if (!userId) {
+        throw new Error("You need to be signed in to update your profile.");
+      }
+      const baseProfile = normalizeProfileRow(profileDoc ?? {}, profileFallback);
+      if (!supabase) {
+        const mergedProfile = normalizeProfileRow(
+          { ...baseProfile, ...partialUpdates, id: userId },
+          baseProfile
+        );
+        profilesCacheRef.current.set(userId, mergedProfile);
+        setProfileDoc(mergedProfile);
+        return mergedProfile;
+      }
+
+      setIsMutating(true);
+      try {
+        const payload = {
+          id: userId,
+          ...partialUpdates,
+          updated_at: new Date().toISOString(),
+        };
+        const { data, error } = await supabase
+          .from(TABLES.profiles)
+          .upsert(payload, { onConflict: "id" })
+          .select("*")
+          .single();
+        if (error) {
+          throw error;
+        }
+        const mergedProfile = normalizeProfileRow(data ?? payload, baseProfile);
+        profilesCacheRef.current.set(userId, mergedProfile);
+        setProfileDoc(mergedProfile);
+        return mergedProfile;
+      } catch (error) {
+        console.error("Failed to update profile", error);
+        throw error;
+      } finally {
+        setIsMutating(false);
+      }
+    },
+    [profileDoc, profileFallback, supabase, userId]
+  );
+
+  const uploadProfilePhoto = useCallback(
+    async (file) => {
+      if (!file) {
+        throw new Error("Please choose an image to upload.");
+      }
+      if (!userId) {
+        throw new Error("You need to be signed in to upload a profile photo.");
+      }
+
+      const safeName = (file.name || "profile").replace(/[^\w.-]/gi, "_").toLowerCase();
+      const objectPath = `${userId}/${Date.now()}-${safeName || "profile"}`;
+      let photoURL = "";
+
+      if (supabase) {
+        try {
+          const storage = supabase.storage.from("profile-photos");
+          const { error: uploadError } = await storage.upload(objectPath, file, {
+            cacheControl: "3600",
+            upsert: true,
+            contentType: file.type || "image/jpeg",
+          });
+          if (uploadError && (!uploadError.message || !uploadError.message.includes("Duplicate"))) {
+            throw uploadError;
+          }
+          const { data: publicUrlData } = storage.getPublicUrl(objectPath);
+          photoURL = publicUrlData?.publicUrl || "";
+        } catch (error) {
+          console.warn("Falling back to inline profile photo storage", error);
+        }
+      }
+
+      if (!photoURL) {
+        const buffer = await file.arrayBuffer();
+        let binary = "";
+        const bytes = new Uint8Array(buffer);
+        const chunkSize = 0x8000;
+        for (let index = 0; index < bytes.length; index += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+        }
+        photoURL = `data:${file.type || "image/jpeg"};base64,${btoa(binary)}`;
+      }
+
+      const updated = await updateProfile({ photoURL });
+      return updated.photoURL;
+    },
+    [supabase, updateProfile, userId]
+  );
+
   const contextValue = useMemo(
     () => ({
       activities,
@@ -1976,6 +2091,8 @@ export function AppDataProvider({ children }) {
       loadingNotifications,
       profileLoading,
       isMutating,
+      updateProfile,
+      uploadProfilePhoto,
     }),
     [
       activities,
@@ -1995,6 +2112,8 @@ export function AppDataProvider({ children }) {
       ideas,
       ideaEndorsements,
       isMutating,
+      uploadProfilePhoto,
+      updateProfile,
       joinActivity,
       proposeBrainstormIdea,
       joinGroup,

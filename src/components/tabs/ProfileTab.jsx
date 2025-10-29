@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo } from "react";
+import Image from "next/image";
+import { useMemo, useRef, useState } from "react";
 import { useAppData } from "../../context/AppDataContext";
 
 function formatNotificationTime(notification) {
@@ -30,7 +31,49 @@ export default function ProfileTab() {
     notifications,
     loading,
     ideaEndorsements,
+    uploadProfilePhoto,
   } = useAppData();
+
+  const [photoPreview, setPhotoPreview] = useState("");
+  const [uploadError, setUploadError] = useState("");
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const photoSource = photoPreview || user.photoURL || "/pics/1.jpg";
+  const profileCompletion = Math.min(100, Math.max(0, Number(user.profileCompletion ?? 0)));
+  const displayTagline = user.tagline || "Let's build community together.";
+  const interests = Array.isArray(user.interests) ? user.interests.filter(Boolean) : [];
+  const firstName = (user.name || "You").split(" ")[0];
+
+  const handlePhotoButtonClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handlePhotoChange = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setUploadError("Please select an image file (PNG, JPG).");
+      event.target.value = "";
+      return;
+    }
+    if (typeof uploadProfilePhoto !== "function") {
+      setUploadError("Profile photo uploads are unavailable right now.");
+      event.target.value = "";
+      return;
+    }
+    setIsUploadingPhoto(true);
+    setUploadError("");
+    try {
+      const url = await uploadProfilePhoto(file);
+      setPhotoPreview(url);
+    } catch (error) {
+      setUploadError(error?.message || "We couldn't update your photo. Please try again.");
+    } finally {
+      setIsUploadingPhoto(false);
+      event.target.value = "";
+    }
+  };
 
   const joined = useMemo(
     () => activities.filter((activity) => joinedActivities.includes(activity.id)),
@@ -55,46 +98,172 @@ export default function ProfileTab() {
   if (loading) {
     return (
       <section className="min-h-[50vh] flex items-center justify-center bg-white/70 rounded-3xl border border-white/60 shadow-inner">
-        <p className="text-sm font-semibold text-indigo-500">Loading profile data…</p>
+        <p className="text-sm font-semibold text-indigo-500">Loading profile data...</p>
       </section>
     );
   }
 
   return (
     <section className="space-y-10">
-      <div className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 md:p-10">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-indigo-500 font-semibold">Profile</p>
-            <h2 className="text-3xl font-extrabold text-gray-900 mt-2">{user.name}</h2>
-            <p className="text-gray-600 mt-2">{user.tagline}</p>
-            <div className="flex flex-wrap gap-3 mt-4 text-xs text-gray-500">
-              <span className="bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full">
-                Home: {user.homeCity}
-              </span>
-              <span className="bg-pink-50 text-pink-500 px-3 py-1 rounded-full">
-                Current: {user.currentCity}
-              </span>
+      <div className="rounded-3xl bg-white shadow-xl overflow-hidden">
+        <div className="relative h-48 sm:h-64">
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.25),_transparent_60%)]" />
+        </div>
+        <div className="px-6 pb-8 sm:px-10 -mt-16 sm:-mt-24">
+          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+              <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gray-200">
+                <Image src={photoSource} alt={`${user.name}'s profile photo`} fill sizes="144px" className="object-cover" />
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <p className="text-3xl font-bold text-white">{user.name}</p>
+                  {joinedGroups.length ? (
+                    <span className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80 bg-white/10 px-3 py-1 rounded-full shadow">
+                      {joinedGroups.length} groups
+                    </span>
+                  ) : null}
+                </div>
+                {displayTagline ? <p className="text-sm text-white/90">{displayTagline}</p> : null}
+                <div className="flex flex-wrap gap-2 text-xs text-white/80 mt-2">
+                  {user.homeCity ? (
+                    <span className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
+                      <span className="font-semibold text-white">Home</span>
+                      {user.homeCity}
+                    </span>
+                  ) : null}
+                  {user.currentCity ? (
+                    <span className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
+                      <span className="font-semibold text-white">Current</span>
+                      {user.currentCity}
+                    </span>
+                  ) : null}
+                  {user.email ? (
+                    <span className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
+                      <span className="font-semibold text-white">Email</span>
+                      {user.email}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="lg:w-60 bg-gradient-to-r from-indigo-600/10 to-pink-600/10 border border-white/70 rounded-3xl p-6 space-y-3">
-            <p className="text-sm font-semibold text-gray-700">Profile completion</p>
-            <div className="h-2 bg-white rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-indigo-600 to-pink-500"
-                style={{ width: `${user.profileCompletion}%` }}
-              />
+            <div className="flex flex-col sm:items-end gap-3">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  type="button"
+                  onClick={handlePhotoButtonClick}
+                  disabled={isUploadingPhoto}
+                  className={`inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-indigo-600 shadow transition hover:shadow-md ${
+                    isUploadingPhoto ? "opacity-70 cursor-not-allowed" : ""
+                  }`}
+                >
+                  {isUploadingPhoto ? "Uploading..." : "Upload photo"}
+                </button>
+                <a
+                  href="#profile-settings"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/60 px-5 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/10"
+                >
+                  Profile settings
+                </a>
+              </div>
+              {uploadError ? (
+                <p className="text-xs text-red-200 bg-white/10 border border-white/20 rounded-full px-4 py-1">
+                  {uploadError}
+                </p>
+              ) : null}
+              <div className="w-full sm:w-64 rounded-2xl border border-white/40 bg-white/20 backdrop-blur px-4 py-3 shadow">
+                <p className="text-xs font-semibold text-white/90">Profile completion</p>
+                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/30">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400"
+                    style={{ width: `${profileCompletion}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-white/80">Complete more profile details to unlock organiser insights.</p>
+              </div>
             </div>
-            <p className="text-xs text-gray-500">Complete your profile to unlock organiser insights.</p>
           </div>
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={handlePhotoChange}
+        />
       </div>
 
       <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard label="Activities joined" value={joinedActivities.length} icon="🎉" />
-        <StatCard label="Groups" value={joinedGroups.length} icon="🤝" />
-        <StatCard label="Ideas endorsed" value={ideasEndorsed} icon="💡" />
-        <StatCard label="Upcoming invites" value={notifications.length} icon="🔔" />
+        <StatCard label="Activities joined" value={joinedActivities.length} icon="ðŸŽ‰" />
+        <StatCard label="Groups" value={joinedGroups.length} icon="ðŸ¤" />
+        <StatCard label="Ideas endorsed" value={ideasEndorsed} icon="ðŸ’¡" />
+        <StatCard label="Upcoming invites" value={notifications.length} icon="ðŸ””" />
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+        <div className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 md:p-8 space-y-4">
+          <h3 className="text-xl font-semibold text-gray-900">About {firstName}</h3>
+          <p className="text-sm text-gray-600">{displayTagline}</p>
+          <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm text-gray-600">
+            <div>
+              <dt className="font-semibold text-gray-800">Home base</dt>
+              <dd>{user.homeCity || "Add your home city"}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-gray-800">Current city</dt>
+              <dd>{user.currentCity || "Add your current city"}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-gray-800">Groups</dt>
+              <dd>{joinedGroups.length} joined</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-gray-800">Activities</dt>
+              <dd>{joinedActivities.length} attended</dd>
+            </div>
+            {user.email ? (
+              <div className="sm:col-span-2">
+                <dt className="font-semibold text-gray-800">Contact</dt>
+                <dd>{user.email}</dd>
+              </div>
+            ) : null}
+          </dl>
+          {interests.length ? (
+            <div className="flex flex-wrap gap-2">
+              {interests.map((interest) => (
+                <span key={interest} className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600">
+                  #{interest}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">Add a few interests to let friends know what you care about.</p>
+          )}
+        </div>
+        <div className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 space-y-4">
+          <h3 className="text-xl font-semibold text-gray-900">Highlights</h3>
+          <ul className="space-y-2 text-sm text-gray-600">
+            <li>{joinedActivities.length} activities participated in</li>
+            <li>{joinedGroups.length} communities you check in with</li>
+            <li>{favourites.length} favourites saved for later</li>
+            <li>{notifications.length} recent notifications</li>
+          </ul>
+          <div className="flex flex-wrap gap-2">
+            <a
+              href="/app?tab=explore"
+              className="inline-flex items-center justify-center rounded-full bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow hover:bg-indigo-500"
+            >
+              Discover activities
+            </a>
+            <a
+              href="/app?tab=groups"
+              className="inline-flex items-center justify-center rounded-full border border-indigo-200 px-4 py-2 text-xs font-semibold text-indigo-600 hover:bg-indigo-50"
+            >
+              Find groups
+            </a>
+          </div>
+        </div>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -109,7 +278,7 @@ export default function ProfileTab() {
               <div className="space-y-1">
                 <p className="text-sm font-semibold text-gray-800">{activity.title}</p>
                 <p className="text-xs text-gray-500">
-                  {eventDate.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · {activity.location}
+                  {eventDate.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} - {activity.location}
                 </p>
               </div>
             );
@@ -141,7 +310,7 @@ export default function ProfileTab() {
             <div className="space-y-1">
               <p className="text-sm font-semibold text-gray-800">{group.name}</p>
               <p className="text-xs text-gray-500">
-                {(group.membersCount ?? group.members ?? 0)} members · next {group.nextActivity}
+                {(group.membersCount ?? group.members ?? 0)} members - next {group.nextActivity}
               </p>
             </div>
           )}
@@ -156,14 +325,14 @@ export default function ProfileTab() {
             <div className="space-y-1">
               <p className="text-sm font-semibold text-gray-800">{activity.title}</p>
               <p className="text-xs text-gray-500">
-                {activity.city} · {activity.category}
+                {activity.city} - {activity.category}
               </p>
             </div>
           )}
         />
       </div>
 
-      <div className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 md:p-10 space-y-6">
+      <div id="profile-settings" className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 md:p-10 space-y-6">
         <h3 className="text-xl font-semibold text-gray-900">Settings</h3>
         <div className="grid sm:grid-cols-2 gap-4 text-sm text-gray-600">
           <label className="flex items-center justify-between bg-gray-50 rounded-2xl px-4 py-3">
