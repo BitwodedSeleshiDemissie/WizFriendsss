@@ -65,6 +65,18 @@ function HomeContent() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [formError, setFormError] = useState("");
 
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const handleViewportChange = () => {
+      setIsMobileViewport(window.innerWidth < 768);
+    };
+    handleViewportChange();
+    window.addEventListener("resize", handleViewportChange);
+    return () => window.removeEventListener("resize", handleViewportChange);
+  }, []);
+
   const defaultForm = useMemo(
     () => ({
       title: "",
@@ -162,7 +174,11 @@ function HomeContent() {
   };
 
   const isMessagesView = activeTab === "messages";
-  const messagesViewportOffset = isMessagesView ? "16rem" : "18.5rem";
+  const messagesViewportOffset = isMessagesView
+    ? isMobileViewport
+      ? "11rem"
+      : "16rem"
+    : "18.5rem";
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -192,7 +208,7 @@ function HomeContent() {
     <main className="relative min-h-screen bg-gradient-to-b from-white via-indigo-50 to-pink-100 text-gray-900 pb-40">
 
       {isMessagesView ? (
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-24 lg:pt-28">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 lg:pt-28">
           {renderActiveTab()}
         </div>
       ) : (
