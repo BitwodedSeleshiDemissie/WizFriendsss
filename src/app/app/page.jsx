@@ -176,9 +176,14 @@ function HomeContent() {
   const isMessagesView = activeTab === "messages";
   const messagesViewportOffset = isMessagesView
     ? isMobileViewport
-      ? "11rem"
-      : "16rem"
+      ? "9.5rem"
+      : "14.5rem"
     : "18.5rem";
+
+  const mainClassName = [
+    "relative min-h-screen min-h-[100dvh] bg-gradient-to-b from-white via-indigo-50 to-pink-100 text-gray-900",
+    isMessagesView ? "overflow-hidden pb-24 lg:pb-32" : "pb-40",
+  ].join(" ");
 
   const renderActiveTab = () => {
     switch (activeTab) {
@@ -205,10 +210,10 @@ function HomeContent() {
   const showDashboardHero = activeTab === "nearby";
 
   return (
-    <main className="relative min-h-screen bg-gradient-to-b from-white via-indigo-50 to-pink-100 text-gray-900 pb-40">
+    <main className={mainClassName}>
 
       {isMessagesView ? (
-        <div className="w-full px-4 sm:px-6 lg:px-8 pt-20 sm:pt-24 lg:pt-28">
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 lg:pt-24">
           {renderActiveTab()}
         </div>
       ) : (
@@ -281,7 +286,7 @@ function HomeContent() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-xl w-full rounded-3xl bg-white shadow-2xl border border-white/60 p-6 md:p-8 space-y-6"
+              className="relative max-w-xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto rounded-3xl bg-white shadow-2xl border border-white/60 p-6 md:p-8 space-y-6 sm:max-h-[calc(100vh-4rem)]"
             >
               <button
                 onClick={closeCreateModal}
