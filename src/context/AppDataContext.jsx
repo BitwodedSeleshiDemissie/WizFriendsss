@@ -263,6 +263,11 @@ function normaliseIdea(row) {
   };
 }
 
+
+function shouldDisplayIdea(idea) {
+  return Boolean(idea) && idea.status !== "launched" && !idea.launchedActivityId;
+}
+
 function normaliseNotification(row) {
   if (!row) return null;
   return {
@@ -396,7 +401,7 @@ export function AppDataProvider({ children }) {
     readCollectionCache(GROUPS_CACHE_KEY, INITIAL_GROUPS.map(normaliseGroup).filter(Boolean))
   );
   const [ideas, setIdeas] = useState(() =>
-    readCollectionCache(IDEAS_CACHE_KEY, INITIAL_IDEAS.map(normaliseIdea).filter(Boolean))
+    readCollectionCache(IDEAS_CACHE_KEY, INITIAL_IDEAS.map(normaliseIdea).filter(Boolean)).filter(shouldDisplayIdea)
   );
   const [notifications, setNotifications] = useState([]);
   const [profileDoc, setProfileDoc] = useState(null);
@@ -581,7 +586,7 @@ export function AppDataProvider({ children }) {
       if (!supabase) {
         setIdeas((previous) => {
           if (previous.length > 0) return previous;
-          const fallback = INITIAL_IDEAS.map(normaliseIdea).filter(Boolean);
+          const fallback = INITIAL_IDEAS.map(normaliseIdea).filter(Boolean).filter(shouldDisplayIdea);
           writeCollectionCache(IDEAS_CACHE_KEY, fallback);
           return fallback;
         });
@@ -592,13 +597,13 @@ export function AppDataProvider({ children }) {
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      const mapped = (data ?? []).map(normaliseIdea).filter(Boolean);
+      const mapped = (data ?? []).map(normaliseIdea).filter(Boolean).filter(shouldDisplayIdea);
       setIdeas(mapped);
       writeCollectionCache(IDEAS_CACHE_KEY, mapped);
     } catch (error) {
       console.error("Failed to fetch ideas", error);
       if (ideas.length === 0) {
-        const fallback = INITIAL_IDEAS.map(normaliseIdea).filter(Boolean);
+        const fallback = INITIAL_IDEAS.map(normaliseIdea).filter(Boolean).filter(shouldDisplayIdea);
         setIdeas(fallback);
       }
     } finally {
@@ -1113,8 +1118,8 @@ export function AppDataProvider({ children }) {
         let nextIdeas = [];
         setIdeas((previous) => {
           const updated = [ideaRecord, ...previous];
-          nextIdeas = updated;
-          return updated;
+          nextIdeas = updated.filter(shouldDisplayIdea);
+          return nextIdeas;
         });
         writeCollectionCache(IDEAS_CACHE_KEY, nextIdeas);
 
@@ -1321,7 +1326,11 @@ export function AppDataProvider({ children }) {
           ideaRecord = normaliseIdea(data);
         }
 
-        setIdeas((previous) => [ideaRecord, ...previous]);
+        setIdeas((previous) => {
+          const nextIdeas = [ideaRecord, ...previous].filter(shouldDisplayIdea);
+          writeCollectionCache(IDEAS_CACHE_KEY, nextIdeas);
+          return nextIdeas;
+        });
         setIdeaEndorsements((previous) => (previous.includes(ideaRecord.id) ? previous : [...previous, ideaRecord.id]));
         await appendNotification("Idea published", `"${suggestion.title}" is live in Brainstorm.`);
       } finally {
@@ -1522,8 +1531,8 @@ export function AppDataProvider({ children }) {
         const uniqueSupporters = Array.from(new Set(supporters));
 
         setIdeaEndorsements((previous) => (previous.includes(ideaId) ? previous : [...previous, ideaId]));
-        setIdeas((previous) =>
-          previous.map((idea) => {
+        setIdeas((previous) => {
+          const updated = previous.map((idea) => {
             if (idea.id !== ideaId) return idea;
             const currentCount = idea.endorsementCount ?? idea.supporters?.length ?? 0;
             const nextCount = uniqueSupporters.length;
@@ -1550,8 +1559,11 @@ export function AppDataProvider({ children }) {
               endorsementThreshold: thresholdValue,
               launchedActivityId: launchedActivityId ?? idea.launchedActivityId ?? null,
             };
-          })
-        );
+          });
+          const filtered = updated.filter(shouldDisplayIdea);
+          writeCollectionCache(IDEAS_CACHE_KEY, filtered);
+          return filtered;
+        });
       } finally {
         setIsMutating(false);
       }
