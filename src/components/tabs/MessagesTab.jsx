@@ -317,11 +317,20 @@ export default function MessagesTab({ initialGroupId = null }) {
     : "lg:grid-cols-[360px_minmax(0,1fr)]";
   const asideVisibility = isMobile && showMobileChat ? "hidden" : "flex";
   const chatVisibility = isMobile && !showMobileChat ? "hidden" : "flex";
+  // Keep the inbox anchored inside the viewport so only the inner panels scroll.
+  // 18.5rem covers the app top padding (pt-28 + pt-6) and bottom nav spacing (pb-40).
+  const constrainedHeight = "calc(min(100vh, 100dvh) - 18.5rem)";
 
   return (
-    <section className="flex flex-col gap-4">
-      <div className={`grid min-h-[520px] grid-cols-1 ${layoutColumns} overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm`}>
-        <aside className={`${asideVisibility} flex-col border-b border-gray-200 bg-gray-50 lg:border-b-0 lg:border-r`}>
+    <section
+      className="flex flex-1 flex-col gap-4 overflow-hidden max-h-[calc(100vh-18.5rem)]"
+      style={{ height: constrainedHeight, maxHeight: constrainedHeight }}
+    >
+      <div
+        className={`grid h-full flex-1 min-h-0 grid-cols-1 ${layoutColumns} overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm`}
+        style={{ height: "100%" }}
+      >
+        <aside className={`${asideVisibility} min-h-0 flex-col border-b border-gray-200 bg-gray-50 lg:border-b-0 lg:border-r`}>
           <div className="flex items-center justify-between px-4 py-4">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Chats</h2>
@@ -352,7 +361,7 @@ export default function MessagesTab({ initialGroupId = null }) {
               <span>Showing {visibleThreads.length}</span>
             )}
           </div>
-          <div className="flex-1 overflow-y-auto px-1 pb-2">
+          <div className="flex-1 min-h-0 overflow-y-auto px-1 pb-2">
             {threads.length === 0 ? (
               <div className="mx-3 mt-6 rounded-2xl border border-dashed border-gray-300 bg-white px-4 py-6 text-center text-sm text-gray-500">
                 Join a group to start messaging together.
@@ -403,7 +412,7 @@ export default function MessagesTab({ initialGroupId = null }) {
             )}
           </div>
         </aside>
-        <div className={`${chatVisibility} flex-col bg-white`}>
+        <div className={`${chatVisibility} min-h-0 flex-col bg-white`}>
           {activeThread ? (
             <>
               <header className="flex flex-col gap-4 border-b border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -471,8 +480,8 @@ export default function MessagesTab({ initialGroupId = null }) {
                   ) : null}
                 </div>
               </header>
-              <div className="flex-1 overflow-hidden bg-gray-50">
-                <div className="flex h-full flex-col gap-3 overflow-y-auto px-6 py-6">
+              <div className="flex-1 min-h-0 overflow-hidden bg-gray-50">
+                <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto px-6 py-6">
                   {messages.map((message) => {
                     const key = `${message.id}-${message.createdAt}`;
                     const isOwn = message.senderId && message.senderId === currentUserId;
@@ -564,7 +573,7 @@ export default function MessagesTab({ initialGroupId = null }) {
           )}
         </div>
         {showGroupInfo && activeThread ? (
-          <aside className="hidden flex-col border-l border-gray-200 bg-white px-5 py-5 lg:flex">
+          <aside className="hidden min-h-0 flex-col border-l border-gray-200 bg-white px-5 py-5 lg:flex">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-gray-900">Chat details</h3>
