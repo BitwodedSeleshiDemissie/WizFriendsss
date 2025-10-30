@@ -1933,9 +1933,22 @@ export function AppDataProvider({ children }) {
         .in("id", missing);
       if (!error && Array.isArray(data)) {
         data.forEach((row) => {
+          const rawName = [
+            row.name,
+            row.full_name,
+            row.fullName,
+            row.display_name,
+            row.displayName,
+            row.preferred_name,
+            row.preferredName,
+            row.username,
+            row.user_name,
+            typeof row.email === "string" ? row.email.split("@")[0] : null,
+          ].find((value) => typeof value === "string" && value.trim().length > 0);
           const profile = {
             id: row.id,
-            name: row.name ?? "",
+            name: rawName ? rawName.trim() : "",
+            email: row.email ?? row.user_email ?? "",
             tagline: row.tagline ?? "",
             interests: ensureStringArray(row.interests ?? []),
             currentCity: row.currentCity ?? row.current_city ?? "",
@@ -1954,7 +1967,7 @@ export function AppDataProvider({ children }) {
     });
 
     return result;
-  }, []);
+  }, [supabase]);
 
   const updateProfile = useCallback(
     async (partialUpdates = {}) => {

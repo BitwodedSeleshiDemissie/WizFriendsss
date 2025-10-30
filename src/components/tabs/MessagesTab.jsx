@@ -629,7 +629,9 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
                         {memberIdsForActive.map((memberId) => {
                           const profile = memberProfiles[memberId];
                           const displayName =
-                            profile?.name || (memberId === currentUserId ? "You" : "Community member");
+                            profile?.name ||
+                            profile?.email ||
+                            (memberId === currentUserId ? "You" : "Community member");
                           const subtitle =
                             profile?.tagline ||
                             profile?.currentCity ||

@@ -17,7 +17,6 @@ const MIN_ENDORSEMENTS = 3;
 
 
 const LOCATION_STORAGE_KEY = "wizfriends_preferred_city";
-
 const KNOWN_CITIES = [
   { name: "Cape Town", lat: -33.9249, lng: 18.4241 },
   { name: "Johannesburg", lat: -26.2041, lng: 28.0473 },
