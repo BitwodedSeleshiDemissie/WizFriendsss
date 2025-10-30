@@ -43,7 +43,7 @@ function buildPreview(thread) {
   return body.length > MAX_PREVIEW_LENGTH ? `${body.slice(0, MAX_PREVIEW_LENGTH)}...` : body;
 }
 
-export default function MessagesTab({ initialGroupId = null }) {
+export default function MessagesTab({ initialGroupId = null, viewportOffset = "18.5rem" }) {
   const {
     groups,
     joinedGroups,
@@ -318,12 +318,12 @@ export default function MessagesTab({ initialGroupId = null }) {
   const asideVisibility = isMobile && showMobileChat ? "hidden" : "flex";
   const chatVisibility = isMobile && !showMobileChat ? "hidden" : "flex";
   // Keep the inbox anchored inside the viewport so only the inner panels scroll.
-  // 18.5rem covers the app top padding (pt-28 + pt-6) and bottom nav spacing (pb-40).
-  const constrainedHeight = "calc(min(100vh, 100dvh) - 18.5rem)";
+  // The parent passes the viewport offset (top padding + bottom nav clearance).
+  const constrainedHeight = `calc(min(100vh, 100dvh) - ${viewportOffset})`;
 
   return (
     <section
-      className="flex flex-1 flex-col gap-4 overflow-hidden max-h-[calc(100vh-18.5rem)]"
+      className="flex flex-1 flex-col gap-4 overflow-hidden"
       style={{ height: constrainedHeight, maxHeight: constrainedHeight }}
     >
       <div

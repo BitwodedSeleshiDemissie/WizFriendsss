@@ -161,6 +161,9 @@ function HomeContent() {
     }
   };
 
+  const isMessagesView = activeTab === "messages";
+  const messagesViewportOffset = isMessagesView ? "16rem" : "18.5rem";
+
   const renderActiveTab = () => {
     switch (activeTab) {
       case "nearby":
@@ -172,7 +175,7 @@ function HomeContent() {
       case "groups":
         return <GroupsTab />;
       case "messages":
-        return <MessagesTab initialGroupId={initialMessageGroupId} />;
+        return <MessagesTab initialGroupId={initialMessageGroupId} viewportOffset={messagesViewportOffset} />;
       case "profile":
         return <ProfileTab />;
       default:
@@ -187,54 +190,62 @@ function HomeContent() {
 
   return (
     <main className="relative min-h-screen bg-gradient-to-b from-white via-indigo-50 to-pink-100 text-gray-900 pb-40">
-      <div className="max-w-7xl mx-auto px-5 pt-28 space-y-12">
-        {showDashboardHero && (
-          <header className="rounded-3xl bg-white/80 backdrop-blur border border-white/60 shadow-xl p-8 md:p-12 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
-            <div className="space-y-4">
-              <p className="text-xs uppercase tracking-[0.3em] text-indigo-500 font-semibold">
-                WizFriends - Product v1.0
-              </p>
-              <h1 className="text-4xl md:text-5xl font-black leading-tight">
-                Find your people, wherever you are.
-              </h1>
-              <p className="text-gray-600 max-w-2xl">
-                Built for newcomers, locals, and community builders. Discover activities, surface new ideas,
-                spin up recurring groups, and keep everything organised in one place.
-              </p>
-              <div className="flex flex-wrap gap-3 text-xs text-gray-600">
-                <span className="bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full">Activities Near Me</span>
-                <span className="bg-pink-50 text-pink-500 px-3 py-1 rounded-full">Explore & Featured</span>
-                <span className="bg-purple-50 text-purple-500 px-3 py-1 rounded-full">Brainstorm with AI</span>
-                <span className="bg-emerald-50 text-emerald-500 px-3 py-1 rounded-full">Groups & Community</span>
-                <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full">Profile Hub</span>
-              </div>
-            </div>
-            <div className="lg:w-72 bg-gradient-to-br from-indigo-600/10 to-pink-600/10 border border-white/70 rounded-3xl p-6 space-y-5">
-              <h2 className="text-lg font-semibold text-gray-800">Product health snapshot</h2>
-              <div className="space-y-3 text-sm text-gray-700">
-                <div className="flex items-center justify-between">
-                  <span>Upcoming activities</span>
-                  <span className="font-semibold text-indigo-600">{totalUpcomingActivities}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Active groups</span>
-                  <span className="font-semibold text-pink-500">{totalGroups}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span>Open notifications</span>
-                  <span className="font-semibold text-purple-500">{unreadNotifications}</span>
-                </div>
-              </div>
-              <p className="text-xs text-gray-500">
-                Success = new members joining or endorsing within 3 days, at least one event per first session,
-                and weekly returners hosting or attending.
-              </p>
-            </div>
-          </header>
-        )}
 
-        <section className={showDashboardHero ? "" : "pt-6"}>{renderActiveTab()}</section>
-      </div>
+      {isMessagesView ? (
+        <div className="w-full px-4 sm:px-6 lg:px-8 pt-24 lg:pt-28">
+          {renderActiveTab()}
+        </div>
+      ) : (
+        <div className="max-w-7xl mx-auto px-5 pt-28 space-y-12">
+          {showDashboardHero && (
+            <header className="rounded-3xl bg-white/80 backdrop-blur border border-white/60 shadow-xl p-8 md:p-12 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+              <div className="space-y-4">
+                <p className="text-xs uppercase tracking-[0.3em] text-indigo-500 font-semibold">
+                  WizFriends - Product v1.0
+                </p>
+                <h1 className="text-4xl md:text-5xl font-black leading-tight">
+                  Find your people, wherever you are.
+                </h1>
+                <p className="text-gray-600 max-w-2xl">
+                  Built for newcomers, locals, and community builders. Discover activities, surface new ideas,
+                  spin up recurring groups, and keep everything organised in one place.
+                </p>
+                <div className="flex flex-wrap gap-3 text-xs text-gray-600">
+                  <span className="bg-indigo-50 text-indigo-500 px-3 py-1 rounded-full">Activities Near Me</span>
+                  <span className="bg-pink-50 text-pink-500 px-3 py-1 rounded-full">Explore & Featured</span>
+                  <span className="bg-purple-50 text-purple-500 px-3 py-1 rounded-full">Brainstorm with AI</span>
+                  <span className="bg-emerald-50 text-emerald-500 px-3 py-1 rounded-full">Groups & Community</span>
+                  <span className="bg-gray-100 text-gray-600 px-3 py-1 rounded-full">Profile Hub</span>
+                </div>
+              </div>
+              <div className="lg:w-72 bg-gradient-to-br from-indigo-600/10 to-pink-600/10 border border-white/70 rounded-3xl p-6 space-y-5">
+                <h2 className="text-lg font-semibold text-gray-800">Product health snapshot</h2>
+                <div className="space-y-3 text-sm text-gray-700">
+                  <div className="flex items-center justify-between">
+                    <span>Upcoming activities</span>
+                    <span className="font-semibold text-indigo-600">{totalUpcomingActivities}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Active groups</span>
+                    <span className="font-semibold text-pink-500">{totalGroups}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span>Open notifications</span>
+                    <span className="font-semibold text-purple-500">{unreadNotifications}</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Success = new members joining or endorsing within 3 days, at least one event per first session,
+                  and weekly returners hosting or attending.
+                </p>
+              </div>
+            </header>
+          )}
+
+          <section className={showDashboardHero ? "" : "pt-6"}>{renderActiveTab()}</section>
+        </div>
+      )}
+
 
       <BottomTabNav
         tabs={TAB_CONFIG}
@@ -407,5 +418,4 @@ export default function AppPage() {
     </Suspense>
   );
 }
-
 
