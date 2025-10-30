@@ -476,7 +476,7 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
                 <span>Members</span>
                 <span className="flex items-center gap-2 text-sm font-semibold text-blue-600 normal-case">
                   {activeMemberCount} {activeMemberCount === 1 ? "member" : "members"}
-                  <span aria-hidden="true">></span>
+                  <span aria-hidden="true">&gt;</span>
                 </span>
               </button>
               <div className="flex-1 min-h-0 overflow-hidden bg-gray-50">
@@ -696,3 +696,4 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
     </section>
   );
 }
+
