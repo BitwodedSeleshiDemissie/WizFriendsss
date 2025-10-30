@@ -186,7 +186,7 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
     if (!activeThreadId) {
       setMembersLoading(false);
       setMemberProfiles({});
-      setShowGroupInfo(false);
+      setShowGroupDetails(false);
       return;
     }
     if (memberIdsForActive.length === 0) {
@@ -271,7 +271,7 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
   const handleBackToThreads = () => {
     if (!isMobile) return;
     setShowMobileChat(false);
-    setShowGroupInfo(false);
+    setShowGroupDetails(false);
   };
 
   const handleSend = async () => {
@@ -696,4 +696,5 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
     </section>
   );
 }
+
 
