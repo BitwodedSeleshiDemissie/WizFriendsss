@@ -14,6 +14,8 @@ const STORAGE_KEYS = {
 
 const MIN_ENDORSEMENTS = 3;
 
+
+
 const LOCATION_STORAGE_KEY = "wizfriends_preferred_city";
 
 const KNOWN_CITIES = [

@@ -83,7 +83,8 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
   const [sending, setSending] = useState(false);
   const [leaving, setLeaving] = useState(false);
   const messageEndRef = useRef(null);
-  const [showGroupInfo, setShowGroupInfo] = useState(false);
+  const [showGroupDetails, setShowGroupDetails] = useState(false);
+  const [showMembersList, setShowMembersList] = useState(false);
   const [memberProfiles, setMemberProfiles] = useState({});
   const [membersLoading, setMembersLoading] = useState(false);
   const [membersError, setMembersError] = useState("");
@@ -142,7 +143,8 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
   }, [activeGroupId]);
 
   useEffect(() => {
-    setShowGroupInfo(false);
+    setShowGroupDetails(false);
+    setShowMembersList(false);
   }, [activeGroupId]);
 
   useEffect(() => {
@@ -229,9 +231,23 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
     }
   }, [messages, activeGroupId]);
 
+  const handleOpenGroupDetails = () => {
+    setShowMembersList(false);
+    setShowGroupDetails(true);
+  };
+
+  const handleCloseGroupDetails = () => {
+    setShowGroupDetails(false);
+    setShowMembersList(false);
+  };
+
+  const handleToggleMembersList = () => {
+    setShowMembersList((previous) => !previous);
+  };
+
   const handleViewProfile = (memberId) => {
     if (!memberId) return;
-    setShowGroupInfo(false);
+    handleCloseGroupDetails();
     if (memberId === currentUserId) {
       router.push("/app?tab=profile");
       return;
@@ -303,6 +319,7 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
         delete next[activeThread.id];
         return next;
       });
+      handleCloseGroupDetails();
     } catch (err) {
       setError(err?.message || "We couldn't update your membership. Please try again.");
     } finally {
@@ -312,9 +329,7 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
 
   const canLeaveActive = Boolean(activeThread) && activeThread.ownerId !== currentUserId;
   const activeMemberCount = activeThread?.membersCount ?? memberIdsForActive.length;
-  const layoutColumns = showGroupInfo && activeThread
-    ? "lg:grid-cols-[360px_minmax(0,1fr)_320px]"
-    : "lg:grid-cols-[360px_minmax(0,1fr)]";
+  const layoutColumns = "lg:grid-cols-[360px_minmax(0,1fr)]";
   const asideVisibility = isMobile && showMobileChat ? "hidden" : "flex";
   const chatVisibility = isMobile && !showMobileChat ? "hidden" : "flex";
   // Keep the inbox anchored inside the viewport so only the inner panels scroll.
@@ -415,7 +430,7 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
         <div className={`${chatVisibility} min-h-0 flex-col bg-white`}>
           {activeThread ? (
             <>
-              <header className="flex flex-col gap-4 border-b border-gray-200 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <header className="flex items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
                 <div className="flex items-center gap-3">
                   {isMobile && showMobileChat && (
                     <button
@@ -427,7 +442,7 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
                       &larr;
                     </button>
                   )}
-                  <div className="relative h-12 w-12 overflow-hidden rounded-full bg-gray-200">
+                  <div className="relative h-10 w-10 overflow-hidden rounded-full bg-gray-200 sm:h-12 sm:w-12">
                     <Image
                       src={activeThread.image || "/pics/1.jpg"}
                       alt={activeThread.name}
@@ -436,50 +451,34 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
                       className="object-cover"
                     />
                   </div>
-                  <div>
-                    <h4 className="text-base font-semibold text-gray-900">{activeThread.name}</h4>
-                    <p className="text-xs text-gray-500">
-                      {(activeThread.baseLocation || "Hybrid").trim()} - {activeMemberCount} members
+                  <div className="min-w-0">
+                    <h4 className="truncate text-sm font-semibold text-gray-900 sm:text-base">{activeThread.name}</h4>
+                    <p className="text-xs text-gray-400">
+                      {(activeThread.baseLocation || "Hybrid").trim()} {activeThread.cadence ? ` - ${activeThread.cadence}` : ""}
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:gap-2">
-                  <div className="flex items-center gap-2">
-                    <motion.button
-                      type="button"
-                      whileHover={{ scale: 1.02 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => setShowGroupInfo((previous) => !previous)}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                        showGroupInfo ? "border-blue-200 bg-blue-50 text-blue-600" : "border-gray-300 text-gray-600 hover:border-blue-300 hover:text-blue-600"
-                      }`}
-                    >
-                      {showGroupInfo ? "Hide details" : "View details"}
-                    </motion.button>
-                    {canLeaveActive ? (
-                      <motion.button
-                        type="button"
-                        whileHover={{ scale: leaving ? 1 : 1.02 }}
-                        whileTap={{ scale: leaving ? 1 : 0.97 }}
-                        onClick={handleLeaveActiveGroup}
-                        disabled={leaving}
-                        className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
-                          leaving
-                            ? "cursor-not-allowed border-red-200 text-red-300"
-                            : "border-red-200 text-red-600 hover:bg-red-50"
-                        }`}
-                      >
-                        {leaving ? "Leaving..." : "Leave group"}
-                      </motion.button>
-                    ) : (
-                      <span className="text-xs text-gray-400">You manage this group</span>
-                    )}
-                  </div>
-                  {activeThread.cadence ? (
-                    <p className="text-xs text-gray-400">{activeThread.cadence}</p>
-                  ) : null}
-                </div>
+                <motion.button
+                  type="button"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.97 }}
+                  onClick={handleOpenGroupDetails}
+                  className="hidden sm:inline-flex items-center gap-2 rounded-full border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 transition hover:border-blue-300 hover:text-blue-600"
+                >
+                  Group info
+                </motion.button>
               </header>
+              <button
+                type="button"
+                onClick={handleOpenGroupDetails}
+                className="flex w-full items-center justify-between border-b border-gray-200 bg-white px-6 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500"
+              >
+                <span>Members</span>
+                <span className="flex items-center gap-2 text-sm font-semibold text-blue-600 normal-case">
+                  {activeMemberCount} {activeMemberCount === 1 ? "member" : "members"}
+                  <span aria-hidden="true">></span>
+                </span>
+              </button>
               <div className="flex-1 min-h-0 overflow-hidden bg-gray-50">
                 <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto px-6 py-6">
                   {messages.map((message) => {
@@ -572,93 +571,126 @@ export default function MessagesTab({ initialGroupId = null, viewportOffset = "1
             </div>
           )}
         </div>
-        {showGroupInfo && activeThread ? (
-          <aside className="hidden min-h-0 flex-col border-l border-gray-200 bg-white px-5 py-5 lg:flex">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900">Chat details</h3>
-                <p className="text-xs text-gray-500">{activeMemberCount} {activeMemberCount === 1 ? "member" : "members"}</p>
-              </div>
+        {showGroupDetails && activeThread ? (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 px-4 py-6">
+            <div className="relative w-full max-w-md rounded-3xl bg-white shadow-2xl">
               <button
                 type="button"
-                onClick={() => setShowGroupInfo(false)}
-                className="rounded-full border border-gray-300 px-3 py-1 text-xs font-medium text-gray-600 transition hover:border-blue-400 hover:text-blue-600"
+                onClick={handleCloseGroupDetails}
+                className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 text-gray-500 transition hover:border-gray-300 hover:text-gray-700"
+                aria-label="Close group details"
               >
-                Close
+                <span aria-hidden="true">&times;</span>
               </button>
-            </div>
-            <div className="mt-5 space-y-3 text-sm text-gray-600">
-              {activeThread.description ? (
-                <p className="leading-relaxed">{activeThread.description}</p>
-              ) : null}
-              <div className="space-y-1 text-xs text-gray-400">
-                {activeThread.baseLocation ? <p>{(activeThread.baseLocation || "Hybrid").trim()}</p> : null}
-                {activeThread.cadence ? <p>Cadence: {activeThread.cadence}</p> : null}
-              </div>
-              {Array.isArray(activeThread.tags) && activeThread.tags.length > 0 && (
-                <div className="flex flex-wrap gap-2 text-xs text-blue-600">
-                  {activeThread.tags.map((tag) => (
-                    <span key={tag} className="rounded-full bg-blue-50 px-3 py-1">
-                      #{tag}
+              <div className="space-y-6 px-6 py-6">
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold text-gray-900">{activeThread.name}</h3>
+                  {activeThread.description ? (
+                    <p className="text-sm text-gray-600">{activeThread.description}</p>
+                  ) : null}
+                  {(activeThread.baseLocation || activeThread.cadence) ? (
+                    <div className="space-y-1 text-xs text-gray-400">
+                      {activeThread.baseLocation ? <p>{(activeThread.baseLocation || "Hybrid").trim()}</p> : null}
+                      {activeThread.cadence ? <p>Cadence: {activeThread.cadence}</p> : null}
+                    </div>
+                  ) : null}
+                  {Array.isArray(activeThread.tags) && activeThread.tags.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 pt-1 text-xs text-blue-600">
+                      {activeThread.tags.map((tag) => (
+                        <span key={tag} className="rounded-full bg-blue-50 px-3 py-1">
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+                <div className="space-y-3">
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: showMembersList ? 1 : 1.02 }}
+                    whileTap={{ scale: showMembersList ? 1 : 0.97 }}
+                    onClick={handleToggleMembersList}
+                    className="flex w-full items-center justify-between rounded-2xl border border-gray-200 px-4 py-3 text-sm font-medium text-gray-700 transition hover:border-blue-300 hover:text-blue-600"
+                  >
+                    <span>{showMembersList ? "Hide members" : "See members"}</span>
+                    <span className="text-xs text-gray-400">
+                      {activeMemberCount} {activeMemberCount === 1 ? "member" : "members"}
                     </span>
-                  ))}
+                  </motion.button>
+                  {showMembersList ? (
+                    membersLoading ? (
+                      <p className="text-sm text-gray-500">Loading members...</p>
+                    ) : membersError ? (
+                      <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-500">{membersError}</p>
+                    ) : memberIdsForActive.length === 0 ? (
+                      <p className="text-sm text-gray-500">No members listed yet.</p>
+                    ) : (
+                      <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                        {memberIdsForActive.map((memberId) => {
+                          const profile = memberProfiles[memberId];
+                          const displayName =
+                            profile?.name || (memberId === currentUserId ? "You" : "Community member");
+                          const subtitle =
+                            profile?.tagline ||
+                            profile?.currentCity ||
+                            profile?.email ||
+                            (memberId === currentUserId ? "View your profile" : "View profile");
+                          const roleLabel =
+                            memberId === activeThread.ownerId
+                              ? "Owner"
+                              : activeThread.adminIds?.includes(memberId)
+                              ? "Admin"
+                              : null;
+                          const avatar = profile?.photoURL || "/pics/1.jpg";
+                          return (
+                            <button
+                              key={memberId}
+                              type="button"
+                              onClick={() => handleViewProfile(memberId)}
+                              className="group w-full text-left"
+                            >
+                              <div className="flex items-center gap-3 rounded-xl border border-transparent bg-gray-50 px-3 py-2 transition hover:border-blue-200 hover:bg-blue-50">
+                                <div className="relative h-9 w-9 flex-shrink-0 overflow-hidden rounded-full bg-gray-200">
+                                  <Image src={avatar} alt={displayName} fill sizes="36px" className="object-cover" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-semibold text-gray-800">{displayName}</p>
+                                  <p className="truncate text-xs text-gray-500">{subtitle}</p>
+                                </div>
+                                {roleLabel && (
+                                  <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-semibold uppercase text-blue-600">
+                                    {roleLabel}
+                                  </span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )
+                  ) : null}
                 </div>
-              )}
+                {canLeaveActive ? (
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: leaving ? 1 : 1.02 }}
+                    whileTap={{ scale: leaving ? 1 : 0.97 }}
+                    onClick={handleLeaveActiveGroup}
+                    disabled={leaving}
+                    className={`w-full rounded-full border px-4 py-3 text-sm font-semibold transition ${
+                      leaving
+                        ? "cursor-not-allowed border-red-200 text-red-300"
+                        : "border-red-200 text-red-600 hover:bg-red-50"
+                    }`}
+                  >
+                    {leaving ? "Leaving..." : "Leave group"}
+                  </motion.button>
+                ) : (
+                  <p className="text-center text-xs text-gray-400">You manage this group</p>
+                )}
+              </div>
             </div>
-            <div className="mt-6 space-y-3">
-              <h4 className="text-xs font-semibold uppercase text-gray-400">Members</h4>
-              {membersLoading ? (
-                <p className="text-sm text-gray-500">Loading members...</p>
-              ) : membersError ? (
-                <p className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-500">{membersError}</p>
-              ) : memberIdsForActive.length === 0 ? (
-                <p className="text-sm text-gray-500">No members listed yet.</p>
-              ) : (
-                <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
-                  {memberIdsForActive.map((memberId) => {
-                    const profile = memberProfiles[memberId];
-                    const displayName =
-                      profile?.name || (memberId === currentUserId ? "You" : "Community member");
-                    const subtitle =
-                      profile?.tagline ||
-                      profile?.currentCity ||
-                      profile?.email ||
-                      (memberId === currentUserId ? "View your profile" : "View profile");
-                    const roleLabel =
-                      memberId === activeThread.ownerId
-                        ? "Owner"
-                        : activeThread.adminIds?.includes(memberId)
-                        ? "Admin"
-                        : null;
-                    const avatar = profile?.photoURL || "/pics/1.jpg";
-                    return (
-                      <button
-                        key={memberId}
-                        type="button"
-                        onClick={() => handleViewProfile(memberId)}
-                        className="group w-full text-left"
-                      >
-                        <div className="flex items-center gap-3 rounded-xl border border-transparent bg-gray-50 px-3 py-2 transition hover:border-blue-200 hover:bg-blue-50">
-                          <div className="relative h-9 w-9 flex-shrink-0 overflow-hidden rounded-full bg-gray-200">
-                            <Image src={avatar} alt={displayName} fill sizes="36px" className="object-cover" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-semibold text-gray-800">{displayName}</p>
-                            <p className="truncate text-xs text-gray-500">{subtitle}</p>
-                          </div>
-                          {roleLabel && (
-                            <span className="rounded-full bg-blue-50 px-3 py-1 text-[10px] font-semibold uppercase text-blue-600">
-                              {roleLabel}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </aside>
+          </div>
         ) : null}
       </div>
     </section>
