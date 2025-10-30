@@ -2,10 +2,13 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { Playfair_Display } from "next/font/google";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+
+const logoFont = Playfair_Display({ subsets: ["latin"], weight: ["700"] });
 
 
 export default function Navbar() {
@@ -84,7 +87,7 @@ export default function Navbar() {
         <Link href="/" className="select-none">
           <motion.h1
             whileHover={{ scale: 1.05 }}
-            className="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent cursor-pointer"
+            className={`${logoFont.className} text-3xl sm:text-4xl font-semibold tracking-[0.12em] leading-none bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 bg-clip-text text-transparent cursor-pointer`}
           >
             WizFriends
           </motion.h1>
