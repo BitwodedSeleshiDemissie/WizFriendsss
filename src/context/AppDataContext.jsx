@@ -2005,10 +2005,18 @@ export function AppDataProvider({ children }) {
             id: row.id,
             name: rawName ? rawName.trim() : "",
             email: row.email ?? row.user_email ?? "",
-            tagline: row.tagline ?? "",
+            tagline: row.tagline ?? row.headline ?? "",
+            bio: row.bio ?? row.about ?? "",
             interests: ensureStringArray(row.interests ?? []),
             currentCity: row.currentCity ?? row.current_city ?? "",
+            homeCity: row.homeCity ?? row.home_city ?? "",
+            profileCompletion: ensureNumber(row.profileCompletion ?? row.profile_completion ?? 0, 0),
             photoURL: row.photoURL ?? row.photo_url ?? "",
+            createdAt: coerceIso(row.createdAt ?? row.created_at),
+            pronouns: row.pronouns ?? row.pronoun ?? "",
+            role: row.role ?? row.profile_role ?? "",
+            website: row.website ?? row.portfolio ?? row.site ?? "",
+            phone: row.phone ?? row.phone_number ?? "",
           };
           cache.set(profile.id, profile);
           result[profile.id] = profile;
@@ -2224,4 +2232,5 @@ export const useAppData = () => {
   }
   return context;
 };
+
 
