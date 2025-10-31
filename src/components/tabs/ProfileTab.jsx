@@ -291,105 +291,89 @@ export default function ProfileTab() {
 
   if (loading) {
     return (
-      <section className="min-h-[50vh] flex items-center justify-center bg-white/70 rounded-3xl border border-white/60 shadow-inner">
+      <section className="min-h-[50vh] flex items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm px-6">
         <p className="text-sm font-semibold text-indigo-500">Loading profile data...</p>
       </section>
     );
   }
 
   return (
-    <section className="space-y-8 md:space-y-12">
-      <div className="rounded-3xl bg-white shadow-xl overflow-hidden">
-        <div className="relative h-48 sm:h-64">
-          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.25),_transparent_60%)]" />
-        </div>
-        <div className="px-4 pb-8 sm:px-10 -mt-16 sm:-mt-24">
-          <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end sm:gap-6">
-              <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gray-200 mx-auto sm:mx-0">
-                <Image src={photoSource} alt={`${user.name}'s profile photo`} fill sizes="144px" className="object-cover" />
-              </div>
-              <div className="flex w-full flex-col items-center gap-2 text-center sm:items-start sm:text-left">
-                <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-start">
-                  <p className="text-3xl font-bold text-white">{user.name}</p>
-                  {joinedGroups.length ? (
-                    <span className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80 bg-white/10 px-3 py-1 rounded-full shadow">
-                      {joinedGroups.length} groups
-                    </span>
-                  ) : null}
-                </div>
-                {displayTagline ? <p className="text-sm text-white/90">{displayTagline}</p> : null}
-                <div className="flex flex-wrap justify-center gap-2 text-xs text-white/80 mt-2 sm:justify-start">
-                  {user.homeCity ? (
-                    <span className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                      <span className="font-semibold text-white">Home</span>
-                      {user.homeCity}
-                    </span>
-                  ) : null}
-                  {user.currentCity ? (
-                    <span className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                      <span className="font-semibold text-white">Current</span>
-                      {user.currentCity}
-                    </span>
-                  ) : null}
-                  {user.email ? (
-                    <span className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
-                      <span className="font-semibold text-white">Email</span>
-                      {user.email}
-                    </span>
-                  ) : null}
-                </div>
+    <section className="space-y-8 md:space-y-12 px-4 pb-16 mx-auto w-full max-w-5xl">
+      <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white shadow-md">
+        <div className="relative px-5 py-8 sm:px-8 sm:py-10">
+          <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
+            <div className="relative h-24 w-24 sm:h-28 sm:w-28 overflow-hidden rounded-full border-4 border-white/80 shadow-lg">
+              <Image src={photoSource} alt={`${user.name}'s profile photo`} fill sizes="112px" className="object-cover" />
+            </div>
+            <div className="flex w-full flex-col items-center gap-2 text-center sm:items-start sm:text-left">
+              <p className="text-2xl font-semibold sm:text-3xl">{user.name || "Community member"}</p>
+              {displayTagline ? <p className="text-sm text-white/90">{displayTagline}</p> : null}
+              <div className="flex flex-wrap justify-center gap-2 text-xs text-white/80 sm:justify-start">
+                {user.homeCity ? (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1">
+                    <span className="font-semibold text-white">Home</span>
+                    {user.homeCity}
+                  </span>
+                ) : null}
+                {user.currentCity ? (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1">
+                    <span className="font-semibold text-white">Current</span>
+                    {user.currentCity}
+                  </span>
+                ) : null}
+                {user.email ? (
+                  <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1">
+                    <span className="font-semibold text-white">Email</span>
+                    {user.email}
+                  </span>
+                ) : null}
               </div>
             </div>
-            <div className="flex flex-col gap-3 sm:items-end">
-              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                <button
-                  type="button"
-                  onClick={handlePhotoButtonClick}
-                  disabled={isUploadingPhoto}
-                  className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-indigo-600 shadow transition hover:shadow-md sm:w-auto ${
-                    isUploadingPhoto ? "opacity-70 cursor-not-allowed" : ""
-                  }`}
-                >
-                  {isUploadingPhoto ? "Uploading..." : "Update photo"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowActivityLog((previous) => !previous)}
-                  className={`inline-flex w-full items-center justify-center gap-2 rounded-full border px-5 py-2 text-sm font-semibold transition sm:w-auto ${
-                    showActivityLog
-                      ? "border-white bg-white/15 text-white shadow"
-                      : "border-white/70 text-white/90 hover:bg-white/10"
-                  }`}
-                  aria-expanded={showActivityLog}
-                  aria-controls="activity-log"
-                >
-                  {showActivityLog ? "Hide log" : "Activity log"}
-                </button>
-                <a
-                  href="#profile-settings"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/60 px-5 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/10 sm:w-auto"
-                >
-                  Profile settings
-                </a>
-              </div>
-              {uploadError ? (
-                <p className="text-xs text-red-200 bg-white/10 border border-white/20 rounded-full px-4 py-1 text-center sm:text-left">
-                  {uploadError}
-                </p>
-              ) : null}
-              <div className="w-full sm:w-64 rounded-2xl border border-white/40 bg-white/20 backdrop-blur px-4 py-3 shadow mx-auto sm:mx-0">
-                <p className="text-xs font-semibold text-white/90">Profile completion</p>
-                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/30">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400"
-                    style={{ width: `${profileCompletion}%` }}
-                  />
-                </div>
-                <p className="mt-2 text-xs text-white/80">Complete more profile details to unlock organiser insights.</p>
-              </div>
+          </div>
+          <div className="mt-6 grid gap-2 sm:auto-cols-max sm:grid-flow-col">
+            <button
+              type="button"
+              onClick={handlePhotoButtonClick}
+              disabled={isUploadingPhoto}
+              className={`inline-flex w-full items-center justify-center rounded-full bg-white px-5 py-2 text-sm font-semibold text-indigo-600 shadow-sm transition hover:-translate-y-0.5 hover:shadow sm:w-auto ${
+                isUploadingPhoto ? "opacity-70 cursor-not-allowed" : ""
+              }`}
+            >
+              {isUploadingPhoto ? "Uploading..." : "Update photo"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowActivityLog((previous) => !previous)}
+              className={`inline-flex w-full items-center justify-center rounded-full border border-white/30 bg-white/15 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-white/25 sm:w-auto ${
+                showActivityLog ? "bg-white/25" : ""
+              }`}
+              aria-expanded={showActivityLog}
+              aria-controls="activity-log"
+            >
+              {showActivityLog ? "Hide log" : "Activity log"}
+            </button>
+            <a
+              href="#profile-settings"
+              className="inline-flex w-full items-center justify-center rounded-full border border-white/30 bg-white/15 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-white/25 sm:w-auto"
+            >
+              Profile settings
+            </a>
+          </div>
+          {uploadError ? (
+            <p className="mt-3 text-xs text-red-200">{uploadError}</p>
+          ) : null}
+          <div className="mt-6 rounded-2xl bg-white/15 p-4 text-white shadow-inner backdrop-blur-md">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-[0.25em] text-white/80">
+              <span>Profile completion</span>
+              <span>{profileCompletion}%</span>
             </div>
+            <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/30">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-white to-pink-200"
+                style={{ width: `${profileCompletion}%` }}
+              />
+            </div>
+            <p className="mt-3 text-xs text-white/85">Complete more details to unlock organiser insights.</p>
           </div>
         </div>
         <input
@@ -400,6 +384,7 @@ export default function ProfileTab() {
           onChange={handlePhotoChange}
         />
       </div>
+
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Activities joined" value={joinedActivities.length} />
