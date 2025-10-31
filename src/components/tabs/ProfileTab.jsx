@@ -670,7 +670,7 @@ export default function ProfileTab() {
         </div>
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="hidden lg:grid lg:grid-cols-2 gap-6">
         <Section
           title="My activities"
           description="Everything you have joined or created."
@@ -704,7 +704,7 @@ export default function ProfileTab() {
         />
       </div>
 
-      <div className="grid lg:grid-cols-2 gap-6">
+      <div className="hidden lg:grid lg:grid-cols-2 gap-6">
         <Section
           title="My groups"
           description="Communities you meet with regularly."
@@ -736,7 +736,7 @@ export default function ProfileTab() {
         />
       </div>
 
-      <div id="profile-settings" className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-8 space-y-6">
+      <div id="profile-settings" className="hidden lg:block rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-8 space-y-6">
         <h3 className="text-xl font-semibold text-gray-900">Settings</h3>
         <div className="grid sm:grid-cols-2 gap-4 text-sm text-gray-600">
           <label className="flex items-center justify-between bg-gray-50 rounded-2xl px-4 py-3">
