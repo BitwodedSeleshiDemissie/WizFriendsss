@@ -1,0 +1,201 @@
+"use client";
+
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import L from "leaflet";
+
+const TILE_URL = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+const TILE_ATTRIBUTION = "&copy; <a href='https://www.openstreetmap.org/copyright'>OpenStreetMap</a> contributors";
+
+const DEFAULT_ZOOM = 13;
+const SELECTED_ZOOM = 14;
+
+const DEFAULT_MARKER_STYLE = {
+  radius: 8,
+  color: "#6366f1",
+  fillColor: "#c026d3",
+  fillOpacity: 0.7,
+  weight: 2,
+};
+
+const SELECTED_MARKER_STYLE = {
+  radius: 12,
+  color: "#312e81",
+  fillColor: "#1d4ed8",
+  fillOpacity: 0.9,
+  weight: 3,
+};
+
+function escapeHtml(value = "") {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter, onLocate }) {
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+  const markersLayerRef = useRef(null);
+  const onSelectRef = useRef(onSelect);
+  const onLocateRef = useRef(onLocate);
+  const initialCenterRef = useRef(fallbackCenter);
+  const [locating, setLocating] = useState(false);
+  const isClient = typeof window !== "undefined";
+
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
+
+  useEffect(() => {
+    onLocateRef.current = onLocate;
+  }, [onLocate]);
+
+  const validActivities = useMemo(
+    () =>
+      (activities ?? []).filter(
+        (activity) =>
+          typeof activity?.latitude === "number" &&
+          !Number.isNaN(activity.latitude) &&
+          typeof activity?.longitude === "number" &&
+          !Number.isNaN(activity.longitude)
+      ),
+    [activities]
+  );
+
+  const selectedActivity = useMemo(
+    () => validActivities.find((activity) => activity.id === selectedActivityId) ?? null,
+    [validActivities, selectedActivityId]
+  );
+
+  useEffect(() => {
+    if (!isClient) return;
+    if (!containerRef.current || mapRef.current) return;
+
+    const map = L.map(containerRef.current, {
+      center: initialCenterRef.current,
+      zoom: DEFAULT_ZOOM,
+      zoomControl: true,
+      attributionControl: true,
+    });
+
+    L.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION }).addTo(map);
+
+    const markersLayer = L.layerGroup().addTo(map);
+
+    map.on("click", () => {
+      onSelectRef.current?.(null);
+    });
+
+    mapRef.current = map;
+    markersLayerRef.current = markersLayer;
+
+    return () => {
+      map.off();
+      map.remove();
+      mapRef.current = null;
+      markersLayerRef.current = null;
+    };
+  }, [isClient]);
+
+  const handleSelect = useCallback((activityId) => {
+    onSelectRef.current?.(activityId);
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    const layer = markersLayerRef.current;
+    if (!map || !layer) return;
+
+    layer.clearLayers();
+
+    validActivities.forEach((activity) => {
+      const isSelected = activity.id === selectedActivityId;
+      const marker = L.circleMarker(
+        [activity.latitude, activity.longitude],
+        isSelected ? SELECTED_MARKER_STYLE : DEFAULT_MARKER_STYLE
+      );
+
+      const tooltipHtml = `<div class="activity-map__tooltip"><span class="activity-map__tooltip-title">${escapeHtml(
+        activity.title ?? "Activity"
+      )}</span><span class="activity-map__tooltip-meta">${escapeHtml(activity.location ?? "")}</span></div>`;
+
+      marker.bindTooltip(tooltipHtml, {
+        direction: "top",
+        permanent: isSelected,
+        opacity: 1,
+        className: "activity-map__tooltip-wrapper",
+      });
+
+      marker.on("click", (event) => {
+        event.originalEvent?.stopPropagation();
+        handleSelect(activity.id);
+      });
+
+      if (!isSelected) {
+        marker.on("mouseover", () => marker.openTooltip());
+        marker.on("mouseout", () => marker.closeTooltip());
+      }
+
+      marker.addTo(layer);
+
+      if (isSelected) {
+        marker.bringToFront();
+      }
+    });
+  }, [validActivities, selectedActivityId, handleSelect]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (selectedActivity) {
+      map.flyTo([selectedActivity.latitude, selectedActivity.longitude], Math.max(map.getZoom(), SELECTED_ZOOM), {
+        duration: 0.6,
+      });
+    } else if (fallbackCenter) {
+      map.flyTo(fallbackCenter, DEFAULT_ZOOM, { duration: 0.5 });
+    }
+  }, [selectedActivity, fallbackCenter]);
+
+  const canLocate = isClient && typeof navigator !== "undefined" && !!navigator.geolocation;
+
+  const handleLocate = useCallback(() => {
+    if (!canLocate || !mapRef.current) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLocating(false);
+        const { latitude, longitude } = position.coords;
+        mapRef.current.flyTo([latitude, longitude], Math.max(mapRef.current.getZoom(), 14), { duration: 0.6 });
+        onLocateRef.current?.([latitude, longitude]);
+      },
+      () => setLocating(false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, [canLocate]);
+
+  if (!isClient) {
+    return null;
+  }
+
+  return (
+    <div className="activity-map__container">
+      <div ref={containerRef} className="activity-map__canvas" />
+      {canLocate ? (
+        <button
+          type="button"
+          onClick={handleLocate}
+          disabled={locating}
+          className="activity-map__floating-button"
+          aria-label="Use my location"
+        >
+          {locating ? "Locating..." : "My location"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+export default memo(ActivityMap);

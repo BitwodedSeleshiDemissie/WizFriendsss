@@ -166,6 +166,24 @@ function normaliseActivity(row) {
       0
     );
   const tags = ensureStringArray(row.tags ?? []);
+  const latitude = ensureNumber(
+    row.latitude ??
+      row.lat ??
+      row.latDegrees ??
+      row.lat_degrees ??
+      row.lat_decimal,
+    null
+  );
+  const longitude = ensureNumber(
+    row.longitude ??
+      row.lng ??
+      row.lon ??
+      row.long ??
+      row.lngDegrees ??
+      row.lng_degrees ??
+      row.lng_decimal,
+    null
+  );
   return {
     id: row.id ?? generateId(),
     title: row.title ?? "Untitled activity",
@@ -193,6 +211,8 @@ function normaliseActivity(row) {
     isVirtual: ensureBoolean(row.isVirtual ?? row.is_virtual ?? false),
     visibility: row.visibility ?? (ensureBoolean(row.is_virtual ?? row.isVirtual) ? "private" : "public"),
     maxAttendees: row.maxAttendees ?? row.max_attendees ?? null,
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
     createdAt: coerceIso(row.created_at ?? row.createdAt) ?? new Date().toISOString(),
     updatedAt: coerceIso(row.updated_at ?? row.updatedAt),
   };
