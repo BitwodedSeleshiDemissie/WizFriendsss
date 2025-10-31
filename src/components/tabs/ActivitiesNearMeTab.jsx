@@ -217,7 +217,32 @@ function matchesDateFilter(eventDate, filter) {
   return true;
 }
 
-export default function ActivitiesNearMeTab() {
+const EARTH_RADIUS_KM = 6371;
+
+function calculateDistanceKm(origin, destination) {
+  if (!origin || !destination) return NaN;
+  const { lat: lat1, lng: lng1 } = origin;
+  const { lat: lat2, lng: lng2 } = destination;
+  if (
+    !Number.isFinite(lat1) ||
+    !Number.isFinite(lng1) ||
+    !Number.isFinite(lat2) ||
+    !Number.isFinite(lng2)
+  ) {
+    return NaN;
+  }
+  const toRadians = (value) => (value * Math.PI) / 180;
+  const dLat = toRadians(lat2 - lat1);
+  const dLng = toRadians(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(toRadians(lat1)) *
+      Math.cos(toRadians(lat2)) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return EARTH_RADIUS_KM * c;
+}\r\n\r\nexport default function ActivitiesNearMeTab() {
   const {
     activities,
     categories,
@@ -266,6 +291,7 @@ export default function ActivitiesNearMeTab() {
 
   const [viewMode, setViewMode] = useState("list");
   const [selectedActivityId, setSelectedActivityId] = useState(null);
+  const [userLocation, setUserLocation] = useState(null);
 
   const nearbyActivities = useMemo(() => {
     const base = activities.filter((activity) => activity.isNearby);
@@ -350,13 +376,28 @@ export default function ActivitiesNearMeTab() {
 
   const selectedDistanceLabel = useMemo(() => {
     if (!selectedActivity) return null;
-    const distance = Number(selectedActivity.distance);
+    let distance = Number(selectedActivity.distance);
+
+    if (!Number.isFinite(distance) || distance <= 0) {
+      if (
+        userLocation &&
+        Number.isFinite(selectedActivity.latitude) &&
+        Number.isFinite(selectedActivity.longitude)
+      ) {
+        distance = calculateDistanceKm(userLocation, {
+          lat: selectedActivity.latitude,
+          lng: selectedActivity.longitude,
+        });
+      }
+    }
+
     if (!Number.isFinite(distance) || distance <= 0) {
       return null;
     }
+
     const formatted = distance >= 10 ? distance.toFixed(0) : distance.toFixed(1);
     return `${formatted} km away`;
-  }, [selectedActivity]);
+  }, [selectedActivity, userLocation]);
 
   const joinedSelected = selectedActivity ? joinedActivities.includes(selectedActivity.id) : false;
   const waitlistedSelected = selectedActivity ? waitlistedActivities.includes(selectedActivity.id) : false;
@@ -366,8 +407,20 @@ export default function ActivitiesNearMeTab() {
     setSelectedActivityId(activityId ?? null);
   }, []);
 
-  const handleUserLocate = useCallback(() => {
-    setSelectedActivityId(null);
+  const handleUserLocate = useCallback((value) => {
+    if (!value) return;
+    if (Array.isArray(value) && value.length === 2) {
+      setUserLocation({ lat: value[0], lng: value[1] });
+      return;
+    }
+    if (Array.isArray(value.location) && value.location.length === 2) {
+      const accuracyValue = Number.isFinite(value.accuracy) ? value.accuracy : null;
+      setUserLocation({
+        lat: value.location[0],
+        lng: value.location[1],
+        accuracy: accuracyValue,
+      });
+    }
   }, []);
 
   const isMapView = viewMode === "map";

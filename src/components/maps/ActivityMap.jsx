@@ -31,6 +31,16 @@ const USER_LOCATION_ICON = L.divIcon({
   iconAnchor: [11, 11],
 });
 
+const USER_ACCURACY_STYLE = {
+  color: "#60a5fa",
+  fillColor: "#bfdbfe",
+  fillOpacity: 0.18,
+  weight: 0,
+  className: "activity-map__user-accuracy",
+};
+
+const MIN_USER_ACCURACY_RADIUS = 80;
+
 function escapeHtml(value = "") {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -45,6 +55,8 @@ function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter,
   const mapRef = useRef(null);
   const markersLayerRef = useRef(null);
   const userLocationMarkerRef = useRef(null);
+  const userAccuracyCircleRef = useRef(null);
+  const suppressNextMapClickRef = useRef(false);
   const onSelectRef = useRef(onSelect);
   const onLocateRef = useRef(onLocate);
   const initialCenterRef = useRef(fallbackCenter);
@@ -92,6 +104,10 @@ function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter,
     const markersLayer = L.layerGroup().addTo(map);
 
     map.on("click", () => {
+      if (suppressNextMapClickRef.current) {
+        suppressNextMapClickRef.current = false;
+        return;
+      }
       onSelectRef.current?.(null);
     });
 
@@ -107,6 +123,11 @@ function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter,
         userLocationMarkerRef.current.remove();
         userLocationMarkerRef.current = null;
       }
+      if (userAccuracyCircleRef.current) {
+        userAccuracyCircleRef.current.remove();
+        userAccuracyCircleRef.current = null;
+      }
+      suppressNextMapClickRef.current = false;
     };
   }, [isClient]);
 
@@ -145,8 +166,12 @@ function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter,
           event.originalEvent.stopPropagation();
         }
         L.DomEvent.stop(event);
+        suppressNextMapClickRef.current = true;
         handleSelect(activity.id);
         marker.openTooltip();
+        setTimeout(() => {
+          suppressNextMapClickRef.current = false;
+        }, 0);
       });
 
       if (!isSelected) {
@@ -199,6 +224,24 @@ function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter,
           }).addTo(map);
         }
 
+        const accuracy = Number(position.coords?.accuracy);
+        if (Number.isFinite(accuracy) && accuracy > 0) {
+          const radius = Math.max(accuracy, MIN_USER_ACCURACY_RADIUS);
+          if (userAccuracyCircleRef.current) {
+            userAccuracyCircleRef.current.setLatLng(location);
+            userAccuracyCircleRef.current.setRadius(radius);
+          } else {
+            userAccuracyCircleRef.current = L.circle(location, {
+              radius,
+              ...USER_ACCURACY_STYLE,
+              interactive: false,
+            }).addTo(map);
+          }
+        } else if (userAccuracyCircleRef.current) {
+          userAccuracyCircleRef.current.remove();
+          userAccuracyCircleRef.current = null;
+        }
+
         if (
           userLocationMarkerRef.current &&
           typeof userLocationMarkerRef.current.setZIndexOffset === "function"
@@ -206,7 +249,7 @@ function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter,
           userLocationMarkerRef.current.setZIndexOffset(1000);
         }
 
-        onLocateRef.current?.(location);
+        onLocateRef.current?.({ location, accuracy: Number.isFinite(accuracy) && accuracy > 0 ? Math.max(accuracy, MIN_USER_ACCURACY_RADIUS) : null });
       },
       () => setLocating(false),
       { enableHighAccuracy: true, timeout: 10000 }

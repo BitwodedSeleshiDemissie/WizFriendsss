@@ -123,3 +123,8 @@ body {
   border-radius: 9999px;
   transform: translate(-50%, -50%);
 }
+.activity-map__user-accuracy {
+  fill: rgba(191, 219, 254, 0.18);
+  stroke: rgba(96, 165, 250, 0.45);
+  stroke-width: 1;
+}
