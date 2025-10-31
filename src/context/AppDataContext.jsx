@@ -189,7 +189,7 @@ function normaliseActivity(row) {
   const locationText = typeof locationTextRaw === "string" ? locationTextRaw.trim() : "";
   const cityTextRaw = row.city ?? row.city_name ?? row.cityName ?? "";
   const cityText =
-    typeof cityTextRaw === "string" && cityTextRaw.trim() ? cityTextRaw.trim() : "Cape Town";
+    typeof cityTextRaw === "string" && cityTextRaw.trim() ? cityTextRaw.trim() : "Torino";
   const isVirtual = ensureBoolean(row.isVirtual ?? row.is_virtual ?? false);
   const isNearby = ensureBoolean(row.isNearby ?? row.is_nearby ?? true);
 

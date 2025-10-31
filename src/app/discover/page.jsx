@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
@@ -18,24 +18,37 @@ const MIN_ENDORSEMENTS = 3;
 
 const LOCATION_STORAGE_KEY = "wizfriends_preferred_city";
 const KNOWN_CITIES = [
-  { name: "Cape Town", lat: -33.9249, lng: 18.4241 },
-  { name: "Johannesburg", lat: -26.2041, lng: 28.0473 },
-  { name: "Durban", lat: -29.8587, lng: 31.0218 },
-  { name: "Pretoria", lat: -25.7479, lng: 28.2293 },
-  { name: "Stellenbosch", lat: -33.9346, lng: 18.861 },
+  { name: "Torino", lat: 45.0703, lng: 7.6869 },
+  { name: "Milano", lat: 45.4642, lng: 9.19 },
+  { name: "Roma", lat: 41.9028, lng: 12.4964 },
+  { name: "Firenze", lat: 43.7696, lng: 11.2558 },
+  { name: "Bologna", lat: 44.4949, lng: 11.3426 },
+  { name: "Napoli", lat: 40.8522, lng: 14.2681 },
 ];
 
 const EARTH_RADIUS_KM = 6371;
 
 const LOCATION_ALIAS_LOOKUP = {
-  "signal hill": "Cape Town",
-  "bo-kaap": "Cape Town",
-  woodstock: "Cape Town",
-  "city bowl": "Cape Town",
-  newlands: "Cape Town",
-  observatory: "Cape Town",
-  "global food house": "Cape Town",
-  "mindful grove": "Cape Town",
+  "parco ruffini": "Torino",
+  ruffini: "Torino",
+  "mole antonelliana": "Torino",
+  "parco del valentino": "Torino",
+  "piazza castello": "Torino",
+  "navigli": "Milano",
+  duomo: "Milano",
+  "parco sempione": "Milano",
+  "garibaldi": "Milano",
+  trastevere: "Roma",
+  "villa borghese": "Roma",
+  testaccio: "Roma",
+  "piazza navona": "Roma",
+  "parco delle cascine": "Firenze",
+  "santa maria novella": "Firenze",
+  "giardini margherita": "Bologna",
+  "quadrilatero": "Bologna",
+  "lungomare caracciolo": "Napoli",
+  chiaia: "Napoli",
+  "centro storico": "Napoli",
 };
 
 function toRadians(value) {
@@ -803,3 +816,4 @@ export default function DiscoverPage() {
     </Suspense>
   );
 }
+
