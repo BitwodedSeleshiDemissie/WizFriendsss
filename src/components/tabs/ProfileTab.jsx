@@ -35,6 +35,29 @@ function formatLogTime(date) {
   return date.toLocaleDateString([], { month: "short", day: "numeric" });
 }
 
+function mapProfileToForm(profile = {}) {
+  return {
+    tagline: profile.tagline ?? "",
+    bio: profile.bio ?? "",
+    currentCity: profile.currentCity ?? "",
+    homeCity: profile.homeCity ?? "",
+    role: profile.role ?? "",
+    pronouns: profile.pronouns ?? "",
+    website: profile.website ?? "",
+    phone: profile.phone ?? "",
+    interestsText: Array.isArray(profile.interests) ? profile.interests.join(", ") : "",
+  };
+}
+
+function normalizeWebsite(value) {
+  const trimmed = (value || "").trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+  return `https://${trimmed}`;
+}
+
 export default function ProfileTab() {
   const {
     userProfile: user,
@@ -48,12 +71,18 @@ export default function ProfileTab() {
     loading,
     ideaEndorsements,
     uploadProfilePhoto,
+    updateProfile,
+    isMutating,
   } = useAppData();
 
   const [photoPreview, setPhotoPreview] = useState("");
   const [uploadError, setUploadError] = useState("");
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [showActivityLog, setShowActivityLog] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [profileForm, setProfileForm] = useState(() => mapProfileToForm(user));
+  const [profileFormError, setProfileFormError] = useState("");
+  const [profileFormSuccess, setProfileFormSuccess] = useState("");
   const fileInputRef = useRef(null);
 
   const photoSource = photoPreview || user.photoURL || "/pics/1.jpg";
@@ -61,12 +90,29 @@ export default function ProfileTab() {
   const displayTagline = user.tagline || "Let's build community together.";
   const interests = Array.isArray(user.interests) ? user.interests.filter(Boolean) : [];
   const firstName = (user.name || "You").split(" ")[0];
+  const aboutText = (user.bio || "").trim() || displayTagline;
+  const supplementaryTagline = user.bio?.trim() && user.tagline ? user.tagline : "";
+  const websiteDisplay = (user.website || "").trim();
+  const websiteHref = websiteDisplay ? normalizeWebsite(websiteDisplay) : "";
 
   useEffect(() => {
     if (photoPreview && user.photoURL && photoPreview !== user.photoURL) {
       setPhotoPreview("");
     }
   }, [photoPreview, user.photoURL]);
+
+  useEffect(() => {
+    if (!isEditingProfile) {
+      setProfileForm(mapProfileToForm(user));
+    }
+  }, [user, isEditingProfile]);
+
+  useEffect(() => {
+    if (isEditingProfile) {
+      setProfileFormError("");
+      setProfileFormSuccess("");
+    }
+  }, [isEditingProfile]);
 
   const handlePhotoButtonClick = () => {
     fileInputRef.current?.click();
@@ -95,6 +141,53 @@ export default function ProfileTab() {
     } finally {
       setIsUploadingPhoto(false);
       event.target.value = "";
+    }
+  };
+
+  const handleProfileFieldChange = (event) => {
+    const { name, value } = event.target;
+    setProfileForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  };
+
+  const handleProfileCancel = () => {
+    setProfileForm(mapProfileToForm(user));
+    setProfileFormError("");
+    setIsEditingProfile(false);
+  };
+
+  const handleProfileSave = async (event) => {
+    event.preventDefault();
+    if (typeof updateProfile !== "function") {
+      setProfileFormError("Profile updates are unavailable right now.");
+      return;
+    }
+
+    setProfileFormError("");
+
+    const payload = {
+      tagline: profileForm.tagline.trim() || null,
+      bio: profileForm.bio.trim() || null,
+      currentCity: profileForm.currentCity.trim() || null,
+      homeCity: profileForm.homeCity.trim() || null,
+      role: profileForm.role.trim() || null,
+      pronouns: profileForm.pronouns.trim() || null,
+      website: normalizeWebsite(profileForm.website),
+      phone: profileForm.phone.trim() || null,
+      interests: profileForm.interestsText
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean),
+    };
+
+    try {
+      await updateProfile(payload);
+      setProfileFormSuccess("Profile updated successfully.");
+      setIsEditingProfile(false);
+    } catch (error) {
+      setProfileFormError(error?.message || "We couldn't save your profile. Please try again.");
     }
   };
 
@@ -211,14 +304,14 @@ export default function ProfileTab() {
           <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.25),_transparent_60%)]" />
         </div>
-        <div className="px-6 pb-8 sm:px-10 -mt-16 sm:-mt-24">
+        <div className="px-4 pb-8 sm:px-10 -mt-16 sm:-mt-24">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-4">
-              <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gray-200">
+            <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-end sm:gap-6">
+              <div className="relative h-32 w-32 sm:h-36 sm:w-36 rounded-full border-4 border-white shadow-xl overflow-hidden bg-gray-200 mx-auto sm:mx-0">
                 <Image src={photoSource} alt={`${user.name}'s profile photo`} fill sizes="144px" className="object-cover" />
               </div>
-              <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-3">
+              <div className="flex w-full flex-col items-center gap-2 text-center sm:items-start sm:text-left">
+                <div className="flex flex-wrap items-center justify-center gap-3 sm:justify-start">
                   <p className="text-3xl font-bold text-white">{user.name}</p>
                   {joinedGroups.length ? (
                     <span className="text-xs font-semibold uppercase tracking-[0.3em] text-white/80 bg-white/10 px-3 py-1 rounded-full shadow">
@@ -227,7 +320,7 @@ export default function ProfileTab() {
                   ) : null}
                 </div>
                 {displayTagline ? <p className="text-sm text-white/90">{displayTagline}</p> : null}
-                <div className="flex flex-wrap gap-2 text-xs text-white/80 mt-2">
+                <div className="flex flex-wrap justify-center gap-2 text-xs text-white/80 mt-2 sm:justify-start">
                   {user.homeCity ? (
                     <span className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1">
                       <span className="font-semibold text-white">Home</span>
@@ -249,13 +342,13 @@ export default function ProfileTab() {
                 </div>
               </div>
             </div>
-            <div className="flex flex-col sm:items-end gap-3">
-              <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col gap-3 sm:items-end">
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                 <button
                   type="button"
                   onClick={handlePhotoButtonClick}
                   disabled={isUploadingPhoto}
-                  className={`inline-flex items-center justify-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-indigo-600 shadow transition hover:shadow-md ${
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-indigo-600 shadow transition hover:shadow-md sm:w-auto ${
                     isUploadingPhoto ? "opacity-70 cursor-not-allowed" : ""
                   }`}
                 >
@@ -264,7 +357,7 @@ export default function ProfileTab() {
                 <button
                   type="button"
                   onClick={() => setShowActivityLog((previous) => !previous)}
-                  className={`inline-flex items-center justify-center gap-2 rounded-full border px-5 py-2 text-sm font-semibold transition ${
+                  className={`inline-flex w-full items-center justify-center gap-2 rounded-full border px-5 py-2 text-sm font-semibold transition sm:w-auto ${
                     showActivityLog
                       ? "border-white bg-white/15 text-white shadow"
                       : "border-white/70 text-white/90 hover:bg-white/10"
@@ -276,17 +369,17 @@ export default function ProfileTab() {
                 </button>
                 <a
                   href="#profile-settings"
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-white/60 px-5 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/10"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/60 px-5 py-2 text-sm font-semibold text-white/90 transition hover:bg-white/10 sm:w-auto"
                 >
                   Profile settings
                 </a>
               </div>
               {uploadError ? (
-                <p className="text-xs text-red-200 bg-white/10 border border-white/20 rounded-full px-4 py-1">
+                <p className="text-xs text-red-200 bg-white/10 border border-white/20 rounded-full px-4 py-1 text-center sm:text-left">
                   {uploadError}
                 </p>
               ) : null}
-              <div className="w-full sm:w-64 rounded-2xl border border-white/40 bg-white/20 backdrop-blur px-4 py-3 shadow">
+              <div className="w-full sm:w-64 rounded-2xl border border-white/40 bg-white/20 backdrop-blur px-4 py-3 shadow mx-auto sm:mx-0">
                 <p className="text-xs font-semibold text-white/90">Profile completion</p>
                 <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white/30">
                   <div
@@ -324,42 +417,231 @@ export default function ProfileTab() {
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 md:p-8 space-y-4">
-          <h3 className="text-xl font-semibold text-gray-900">About {firstName}</h3>
-          <p className="text-sm text-gray-600">{displayTagline}</p>
-          <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm text-gray-600">
-            <div>
-              <dt className="font-semibold text-gray-800">Home base</dt>
-              <dd>{user.homeCity || "Add your home city"}</dd>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-2 text-center sm:text-left">
+              <h3 className="text-xl font-semibold text-gray-900">About {firstName}</h3>
+              <p className="text-sm text-gray-600">{aboutText || "Share a little about yourself so others know you better."}</p>
+              {supplementaryTagline ? (
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-indigo-500">
+                  {supplementaryTagline}
+                </p>
+              ) : null}
             </div>
-            <div>
-              <dt className="font-semibold text-gray-800">Current city</dt>
-              <dd>{user.currentCity || "Add your current city"}</dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-gray-800">Groups</dt>
-              <dd>{joinedGroups.length} joined</dd>
-            </div>
-            <div>
-              <dt className="font-semibold text-gray-800">Activities</dt>
-              <dd>{joinedActivities.length} attended</dd>
-            </div>
-            {user.email ? (
-              <div className="sm:col-span-2">
-                <dt className="font-semibold text-gray-800">Contact</dt>
-                <dd>{user.email}</dd>
-              </div>
+            {!isEditingProfile ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileForm(mapProfileToForm(user));
+                  setIsEditingProfile(true);
+                }}
+                className="inline-flex w-full items-center justify-center rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-700 transition hover:border-indigo-300 hover:text-indigo-600 sm:w-auto"
+              >
+                Edit profile
+              </button>
             ) : null}
-          </dl>
-          {interests.length ? (
-            <div className="flex flex-wrap gap-2">
-              {interests.map((interest) => (
-                <span key={interest} className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600">
-                  #{interest}
-                </span>
-              ))}
-            </div>
+          </div>
+          {profileFormSuccess && !isEditingProfile ? (
+            <p className="rounded-full border border-indigo-100 bg-indigo-50 px-4 py-2 text-xs font-semibold text-indigo-600 text-center sm:text-left">
+              {profileFormSuccess}
+            </p>
+          ) : null}
+          {isEditingProfile ? (
+            <form onSubmit={handleProfileSave} className="space-y-5">
+              {profileFormError ? (
+                <p className="rounded-2xl border border-red-100 bg-red-50 px-4 py-2 text-xs font-semibold text-red-600">
+                  {profileFormError}
+                </p>
+              ) : null}
+              <label className="block space-y-2 text-sm">
+                <span className="font-semibold text-gray-800">About you</span>
+                <textarea
+                  name="bio"
+                  value={profileForm.bio}
+                  onChange={handleProfileFieldChange}
+                  rows={4}
+                  className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                  placeholder="Share a short introduction or what you're looking for."
+                />
+              </label>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="space-y-1 text-sm">
+                  <span className="font-semibold text-gray-800">Quick intro</span>
+                  <input
+                    type="text"
+                    name="tagline"
+                    value={profileForm.tagline}
+                    onChange={handleProfileFieldChange}
+                    className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    placeholder="E.g. Community builder and cyclist"
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="font-semibold text-gray-800">Role or vocation</span>
+                  <input
+                    type="text"
+                    name="role"
+                    value={profileForm.role}
+                    onChange={handleProfileFieldChange}
+                    className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    placeholder="What do you do?"
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="font-semibold text-gray-800">Pronouns</span>
+                  <input
+                    type="text"
+                    name="pronouns"
+                    value={profileForm.pronouns}
+                    onChange={handleProfileFieldChange}
+                    className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    placeholder="They/she/he..."
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="font-semibold text-gray-800">Current city</span>
+                  <input
+                    type="text"
+                    name="currentCity"
+                    value={profileForm.currentCity}
+                    onChange={handleProfileFieldChange}
+                    className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    placeholder="Where you are now"
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="font-semibold text-gray-800">Home base</span>
+                  <input
+                    type="text"
+                    name="homeCity"
+                    value={profileForm.homeCity}
+                    onChange={handleProfileFieldChange}
+                    className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    placeholder="Where you're from"
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="font-semibold text-gray-800">Website or portfolio</span>
+                  <input
+                    type="url"
+                    name="website"
+                    value={profileForm.website}
+                    onChange={handleProfileFieldChange}
+                    className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    placeholder="https://"
+                  />
+                </label>
+                <label className="space-y-1 text-sm">
+                  <span className="font-semibold text-gray-800">Phone (optional)</span>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={profileForm.phone}
+                    onChange={handleProfileFieldChange}
+                    className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    placeholder="Include country code"
+                  />
+                </label>
+                <label className="space-y-1 text-sm sm:col-span-2">
+                  <span className="font-semibold text-gray-800">Interests</span>
+                  <textarea
+                    name="interestsText"
+                    value={profileForm.interestsText}
+                    onChange={handleProfileFieldChange}
+                    rows={2}
+                    className="w-full rounded-2xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                    placeholder="Comma separated topics like design, climate, running"
+                  />
+                  <span className="text-xs text-gray-400">We'll show up to 18 interests on your profile.</span>
+                </label>
+              </div>
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <button
+                  type="submit"
+                  disabled={isMutating}
+                  className="inline-flex w-full items-center justify-center rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-indigo-500 disabled:opacity-70 sm:w-auto"
+                >
+                  {isMutating ? "Saving..." : "Save changes"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleProfileCancel}
+                  className="inline-flex w-full items-center justify-center rounded-full border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 transition hover:border-gray-300 hover:text-gray-800 sm:w-auto"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
           ) : (
-            <p className="text-xs text-gray-400">Add a few interests to let friends know what you care about.</p>
+            <>
+              <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-4 text-sm text-gray-600 text-center sm:text-left">
+                <div>
+                  <dt className="font-semibold text-gray-800">Home base</dt>
+                  <dd>{user.homeCity || "Add your home city"}</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-gray-800">Current city</dt>
+                  <dd>{user.currentCity || "Add your current city"}</dd>
+                </div>
+                {user.role ? (
+                  <div>
+                    <dt className="font-semibold text-gray-800">Role</dt>
+                    <dd>{user.role}</dd>
+                  </div>
+                ) : null}
+                {user.pronouns ? (
+                  <div>
+                    <dt className="font-semibold text-gray-800">Pronouns</dt>
+                    <dd>{user.pronouns}</dd>
+                  </div>
+                ) : null}
+                <div>
+                  <dt className="font-semibold text-gray-800">Groups</dt>
+                  <dd>{joinedGroups.length} joined</dd>
+                </div>
+                <div>
+                  <dt className="font-semibold text-gray-800">Activities</dt>
+                  <dd>{joinedActivities.length} attended</dd>
+                </div>
+                {websiteDisplay ? (
+                  <div className="sm:col-span-2">
+                    <dt className="font-semibold text-gray-800">Website</dt>
+                    <dd>
+                      <a
+                        href={websiteHref}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-indigo-600 underline-offset-4 hover:underline"
+                      >
+                        {websiteDisplay}
+                      </a>
+                    </dd>
+                  </div>
+                ) : null}
+                {user.phone ? (
+                  <div>
+                    <dt className="font-semibold text-gray-800">Phone</dt>
+                    <dd>{user.phone}</dd>
+                  </div>
+                ) : null}
+                {user.email ? (
+                  <div className="sm:col-span-2">
+                    <dt className="font-semibold text-gray-800">Contact</dt>
+                    <dd>{user.email}</dd>
+                  </div>
+                ) : null}
+              </dl>
+              {interests.length ? (
+                <div className="flex flex-wrap justify-center gap-2 sm:justify-start">
+                  {interests.map((interest) => (
+                    <span key={interest} className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-medium text-indigo-600">
+                      #{interest}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400 text-center sm:text-left">Add a few interests to let friends know what you care about.</p>
+              )}
+            </>
           )}
         </div>
         <div className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 space-y-4">
