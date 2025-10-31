@@ -298,7 +298,7 @@ export default function ProfileTab() {
   }
 
   return (
-    <section className="space-y-10">
+    <section className="space-y-8 md:space-y-12">
       <div className="rounded-3xl bg-white shadow-xl overflow-hidden">
         <div className="relative h-48 sm:h-64">
           <div className="absolute inset-0 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" />
@@ -401,11 +401,11 @@ export default function ProfileTab() {
         />
       </div>
 
-      <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <StatCard label="Activities joined" value={joinedActivities.length} icon={<span aria-hidden="true">📅</span>} />
-        <StatCard label="Groups" value={joinedGroups.length} icon={<span aria-hidden="true">🤝</span>} />
-        <StatCard label="Ideas endorsed" value={ideasEndorsed} icon={<span aria-hidden="true">💡</span>} />
-        <StatCard label="Upcoming invites" value={notifications.length} icon={<span aria-hidden="true">📬</span>} />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="Activities joined" value={joinedActivities.length} />
+        <StatCard label="Groups" value={joinedGroups.length} />
+        <StatCard label="Ideas endorsed" value={ideasEndorsed} />
+        <StatCard label="Upcoming invites" value={notifications.length} />
       </div>
 
       {showActivityLog ? (
@@ -416,7 +416,7 @@ export default function ProfileTab() {
       ) : null}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 md:p-8 space-y-4">
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-7 space-y-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2 text-center sm:text-left">
               <h3 className="text-xl font-semibold text-gray-900">About {firstName}</h3>
@@ -644,7 +644,7 @@ export default function ProfileTab() {
             </>
           )}
         </div>
-        <div className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 space-y-4">
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 space-y-4">
           <h3 className="text-xl font-semibold text-gray-900">Highlights</h3>
           <ul className="space-y-2 text-sm text-gray-600">
             <li>{joinedActivities.length} activities participated in</li>
@@ -735,7 +735,7 @@ export default function ProfileTab() {
         />
       </div>
 
-      <div id="profile-settings" className="rounded-3xl bg-white/80 border border-white/60 shadow-xl p-6 md:p-10 space-y-6">
+      <div id="profile-settings" className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-8 space-y-6">
         <h3 className="text-xl font-semibold text-gray-900">Settings</h3>
         <div className="grid sm:grid-cols-2 gap-4 text-sm text-gray-600">
           <label className="flex items-center justify-between bg-gray-50 rounded-2xl px-4 py-3">
@@ -760,23 +760,18 @@ export default function ProfileTab() {
   );
 }
 
-function StatCard({ label, value, icon }) {
+function StatCard({ label, value }) {
   return (
-    <div className="rounded-3xl border border-white/60 bg-white/80 shadow-lg p-5 flex items-center gap-4">
-      <div className="w-12 h-12 rounded-2xl bg-gradient-to-r from-indigo-600/10 to-pink-600/10 text-2xl flex items-center justify-center">
-        {icon}
-      </div>
-      <div>
-        <p className="text-xs uppercase tracking-[0.25em] text-gray-500 font-semibold">{label}</p>
-        <p className="text-xl font-bold text-gray-900">{value}</p>
-      </div>
+    <div className="rounded-2xl border border-indigo-50/60 bg-white shadow-sm p-4 flex flex-col gap-1 text-center sm:text-left">
+      <p className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">{label}</p>
+      <p className="text-2xl font-bold text-gray-900">{value}</p>
     </div>
   );
 }
 
 function Section({ title, description, emptyHint, items, renderItem }) {
   return (
-    <div className="rounded-3xl border border-gray-100 bg-white shadow-lg p-6 space-y-4">
+    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 space-y-4">
       <div>
         <h4 className="text-lg font-semibold text-gray-900">{title}</h4>
         <p className="text-sm text-gray-500 mt-1">{description}</p>
@@ -798,7 +793,7 @@ function Section({ title, description, emptyHint, items, renderItem }) {
 
 function ActivityLogCard({ entries, onClose }) {
   return (
-    <div id="activity-log" className="rounded-3xl border border-gray-100 bg-white shadow-xl p-6 md:p-8 space-y-4">
+    <div id="activity-log" className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-7 space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">Activity log</h3>
@@ -807,7 +802,7 @@ function ActivityLogCard({ entries, onClose }) {
         <button
           type="button"
           onClick={onClose}
-          className="self-start rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600"
+          className="w-full rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600 sm:w-auto sm:self-auto"
         >
           Close log
         </button>

@@ -1,4 +1,18 @@
-/** @type {import('next').NextConfig} */
+﻿/** @type {import('next').NextConfig} */
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL)
+  : null;
+
+const supabasePattern = supabaseUrl
+  ? [
+      {
+        protocol: supabaseUrl.protocol.replace(":", ""),
+        hostname: supabaseUrl.hostname,
+        pathname: "/storage/v1/object/public/profile-photos/**",
+      },
+    ]
+  : [];
+
 const nextConfig = {
   images: {
     remotePatterns: [
@@ -12,6 +26,7 @@ const nextConfig = {
         hostname: "images.unsplash.com",
         pathname: "**",
       },
+      ...supabasePattern,
     ],
   },
 };

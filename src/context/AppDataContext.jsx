@@ -129,6 +129,11 @@ function normalizeProfileRow(row = {}, fallback = {}) {
   profile.homeCity = row.homeCity ?? row.home_city ?? fallback.homeCity ?? "";
   profile.currentCity = row.currentCity ?? row.current_city ?? fallback.currentCity ?? "";
   profile.photoURL = row.photoURL ?? row.photo_url ?? fallback.photoURL ?? "";
+  profile.bio = row.bio ?? row.about ?? fallback.bio ?? "";
+  profile.role = row.role ?? row.profile_role ?? fallback.role ?? "";
+  profile.pronouns = row.pronouns ?? row.pronoun ?? fallback.pronouns ?? "";
+  profile.website = row.website ?? row.portfolio ?? row.site ?? fallback.website ?? "";
+  profile.phone = row.phone ?? row.phone_number ?? fallback.phone ?? "";
   profile.interests = ensureStringArray(row.interests ?? fallback.interests ?? []);
   profile.profileCompletion = ensureNumber(
     row.profileCompletion ?? row.profile_completion ?? fallback.profileCompletion ?? 60,
@@ -139,6 +144,41 @@ function normalizeProfileRow(row = {}, fallback = {}) {
   return profile;
 }
 
+
+
+const PROFILE_COLUMN_MAP = {
+  name: "name",
+  email: "email",
+  tagline: "tagline",
+  bio: "bio",
+  role: "role",
+  pronouns: "pronouns",
+  website: "website",
+  phone: "phone",
+  interests: "interests",
+  homeCity: "home_city",
+  currentCity: "current_city",
+  profileCompletion: "profile_completion",
+  photoURL: "photo_url",
+  createdAt: "created_at",
+  updatedAt: "updated_at",
+};
+
+function mapProfileUpdatesToRow(updates = {}) {
+  const mapped = {};
+  Object.entries(updates).forEach(([key, value]) => {
+    if (value === undefined) {
+      return;
+    }
+    const column = PROFILE_COLUMN_MAP[key];
+    if (!column) {
+      // ignore fields we do not persist in the profile table
+      return;
+    }
+    mapped[column] = value;
+  });
+  return mapped;
+}
 
 function normaliseActivity(row) {
   if (!row) return null;
@@ -2053,7 +2093,7 @@ export function AppDataProvider({ children }) {
       try {
         const payload = {
           id: userId,
-          ...partialUpdates,
+          ...mapProfileUpdatesToRow(partialUpdates),
           updated_at: new Date().toISOString(),
         };
         const { data, error } = await supabase
