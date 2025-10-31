@@ -158,6 +158,17 @@ export default function ProfileTab() {
     setIsEditingProfile(false);
   };
 
+  const handleEditShortcut = () => {
+    setProfileForm(mapProfileToForm(user));
+    setIsEditingProfile(true);
+    if (typeof window !== "undefined") {
+      window.requestAnimationFrame(() => {
+        const card = document.getElementById("profile-about-card");
+        card?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    }
+  };
+
   const handleProfileSave = async (event) => {
     event.preventDefault();
     if (typeof updateProfile !== "function") {
@@ -289,6 +300,15 @@ export default function ProfileTab() {
       });
   }, [favourites, ideaEndorsements, ideas, joined, myGroups, user.id, user.uid]);
 
+  const statsSummary = useMemo(
+    () => [
+      { label: "Activities", value: joinedActivities.length },
+      { label: "Groups", value: joinedGroups.length },
+      { label: "Ideas endorsed", value: ideasEndorsed },
+    ],
+    [joinedActivities.length, joinedGroups.length, ideasEndorsed]
+  );
+
   if (loading) {
     return (
       <section className="min-h-[50vh] flex items-center justify-center rounded-2xl border border-gray-200 bg-white shadow-sm px-6">
@@ -298,7 +318,8 @@ export default function ProfileTab() {
   }
 
   return (
-    <section className="space-y-8 md:space-y-12 px-4 pb-16 mx-auto w-full max-w-5xl">
+    <>
+      <section className="space-y-8 md:space-y-12 px-4 pb-16 mx-auto w-full max-w-5xl">
       <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 text-white shadow-md">
         <div className="relative px-5 py-8 sm:px-8 sm:py-10">
           <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-center sm:gap-6">
@@ -331,6 +352,13 @@ export default function ProfileTab() {
             </div>
           </div>
           <div className="mt-6 grid gap-2 sm:auto-cols-max sm:grid-flow-col">
+            <button
+              type="button"
+              onClick={handleEditShortcut}
+              className="inline-flex w-full items-center justify-center rounded-full bg-gradient-to-r from-pink-500 to-indigo-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow sm:w-auto"
+            >
+              Edit profile
+            </button>
             <button
               type="button"
               onClick={handlePhotoButtonClick}
@@ -386,22 +414,10 @@ export default function ProfileTab() {
       </div>
 
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Activities joined" value={joinedActivities.length} />
-        <StatCard label="Groups" value={joinedGroups.length} />
-        <StatCard label="Ideas endorsed" value={ideasEndorsed} />
-        <StatCard label="Upcoming invites" value={notifications.length} />
-      </div>
-
-      {showActivityLog ? (
-        <ActivityLogCard
-          entries={activityLogEntries}
-          onClose={() => setShowActivityLog(false)}
-        />
-      ) : null}
+      <StatsRow stats={statsSummary} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-7 space-y-5">
+        <div id="profile-about-card" className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-7 space-y-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2 text-center sm:text-left">
               <h3 className="text-xl font-semibold text-gray-900">About {firstName}</h3>
@@ -741,15 +757,28 @@ export default function ProfileTab() {
           </label>
         </div>
       </div>
-    </section>
+      </section>
+      {showActivityLog ? (
+        <ActivityLogOverlay entries={activityLogEntries} onClose={() => setShowActivityLog(false)} />
+      ) : null}
+    </>
   );
 }
 
-function StatCard({ label, value }) {
+function StatsRow({ stats }) {
   return (
-    <div className="rounded-2xl border border-indigo-50/60 bg-white shadow-sm p-4 flex flex-col gap-1 text-center sm:text-left">
-      <p className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">{label}</p>
-      <p className="text-2xl font-bold text-gray-900">{value}</p>
+    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4">
+      <div className="flex flex-wrap items-stretch justify-between gap-4">
+        {stats.map((stat) => (
+          <div
+            key={stat.label}
+            className="flex min-w-[120px] flex-1 flex-col items-center gap-1 text-center sm:items-start sm:text-left"
+          >
+            <p className="text-xs uppercase tracking-[0.2em] text-gray-500 font-semibold">{stat.label}</p>
+            <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -776,42 +805,46 @@ function Section({ title, description, emptyHint, items, renderItem }) {
   );
 }
 
-function ActivityLogCard({ entries, onClose }) {
+function ActivityLogOverlay({ entries, onClose }) {
   return (
-    <div id="activity-log" className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-7 space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900">Activity log</h3>
-          <p className="text-sm text-gray-500">Timeline of everything you've been up to recently.</p>
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/45 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-xl overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl sm:mx-6">
+        <div className="flex items-center justify-between border-b border-gray-100 px-5 py-4">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">Activity log</h3>
+            <p className="text-xs text-gray-500">Everything you've been up to recently.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600"
+          >
+            Close
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="w-full rounded-full border border-gray-200 px-4 py-2 text-xs font-semibold text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600 sm:w-auto sm:self-auto"
-        >
-          Close log
-        </button>
+        <div className="max-h-[70vh] overflow-y-auto px-5 py-4 space-y-3">
+          {entries.length === 0 ? (
+            <p className="rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-500">
+              Your log is clear for now. Join an activity or endorse an idea to see it appear here.
+            </p>
+          ) : (
+            <ol className="space-y-3 text-sm text-gray-600">
+              {entries.map((entry) => (
+                <li key={entry.id} className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-xs uppercase tracking-[0.25em] text-indigo-500 font-semibold">{entry.kind}</p>
+                      <p className="text-base font-semibold text-gray-900">{entry.title}</p>
+                      {entry.detail ? <p className="text-xs text-gray-500 mt-1">{entry.detail}</p> : null}
+                    </div>
+                    <span className="text-xs text-gray-400 whitespace-nowrap">{formatLogTime(entry.timestamp)}</span>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          )}
+        </div>
       </div>
-      {entries.length === 0 ? (
-        <p className="rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-500">
-          Your log is clear for now. Join an activity or endorse an idea to see it appear here.
-        </p>
-      ) : (
-        <ol className="space-y-3 text-sm text-gray-600">
-          {entries.map((entry) => (
-            <li key={entry.id} className="rounded-2xl border border-gray-100 bg-gray-50 px-4 py-3">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs uppercase tracking-[0.25em] text-indigo-500 font-semibold">{entry.kind}</p>
-                  <p className="text-base font-semibold text-gray-900">{entry.title}</p>
-                  {entry.detail ? <p className="text-xs text-gray-500 mt-1">{entry.detail}</p> : null}
-                </div>
-                <span className="text-xs text-gray-400 whitespace-nowrap">{formatLogTime(entry.timestamp)}</span>
-              </div>
-            </li>
-          ))}
-        </ol>
-      )}
     </div>
   );
 }
