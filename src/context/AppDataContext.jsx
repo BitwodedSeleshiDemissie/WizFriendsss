@@ -748,6 +748,7 @@ export function AppDataProvider({ children }) {
         .maybeSingle();
       if (error) throw error;
       if (!data) {
+        const timestamp = new Date().toISOString();
         const fallbackProfile = {
           id: userId,
           name: profileFallback.name ?? displayName,
@@ -758,17 +759,36 @@ export function AppDataProvider({ children }) {
           interests: ensureStringArray(profileFallback.interests ?? []),
           profileCompletion: profileFallback.profileCompletion ?? 60,
           photoURL: profileFallback.photoURL ?? "",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
+          createdAt: timestamp,
+          updatedAt: timestamp,
         };
-        setProfileDoc(fallbackProfile);
+        const payload = {
+          id: userId,
+          ...mapProfileUpdatesToRow({
+            name: fallbackProfile.name,
+            email: fallbackProfile.email,
+            homeCity: fallbackProfile.homeCity,
+            currentCity: fallbackProfile.currentCity,
+            tagline: fallbackProfile.tagline,
+            interests: fallbackProfile.interests,
+            profileCompletion: fallbackProfile.profileCompletion,
+            photoURL: fallbackProfile.photoURL,
+            createdAt: fallbackProfile.createdAt,
+            updatedAt: fallbackProfile.updatedAt,
+          }),
+        };
+        const { data: inserted, error: insertError } = await supabase
+          .from(TABLES.profiles)
+          .upsert(payload, { onConflict: "id" })
+          .select("*")
+          .single();
+        if (insertError) throw insertError;
+        const normalized = normalizeProfileRow(inserted ?? payload, fallbackProfile);
+        profilesCacheRef.current.set(userId, { id: userId, ...normalized });
+        setProfileDoc(normalized);
         return;
       }
-      const profile = {
-        ...data,
-        createdAt: coerceIso(data.created_at ?? data.createdAt) ?? new Date().toISOString(),
-        updatedAt: coerceIso(data.updated_at ?? data.updatedAt),
-      };
+      const profile = normalizeProfileRow(data, profileFallback);
       profilesCacheRef.current.set(userId, { id: userId, ...profile });
       setProfileDoc(profile);
     } catch (error) {
