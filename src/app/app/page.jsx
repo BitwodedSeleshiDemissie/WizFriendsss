@@ -207,7 +207,7 @@ function HomeContent() {
   const totalUpcomingActivities = loadingActivities ? "…" : activities.length;
   const totalGroups = loadingGroups ? "…" : groups.length;
   const unreadNotifications = loadingNotifications ? "…" : notifications.length;
-  const showDashboardHero = activeTab === "nearby";
+  const showDashboardHero = activeTab === "nearby" && !isMobileViewport;
 
   return (
     <main className={mainClassName}>
@@ -217,7 +217,7 @@ function HomeContent() {
           {renderActiveTab()}
         </div>
       ) : (
-        <div className="max-w-7xl mx-auto px-5 pt-28 space-y-12">
+        <div className="max-w-7xl mx-auto px-5 pt-20 sm:pt-24 lg:pt-28 space-y-12">
           {showDashboardHero && (
             <header className="rounded-3xl bg-white/80 backdrop-blur border border-white/60 shadow-xl p-8 md:p-12 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
               <div className="space-y-4">

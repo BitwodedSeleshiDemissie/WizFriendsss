@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useAppData } from "../../context/AppDataContext";
 
@@ -189,6 +189,22 @@ export default function ActivitiesNearMeTab() {
     toggleSaveActivity,
     loadingActivities,
   } = useAppData();
+  const [isMobile, setIsMobile] = useState(false);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+    const updateViewport = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    updateViewport();
+    window.addEventListener("resize", updateViewport);
+    return () => window.removeEventListener("resize", updateViewport);
+  }, []);
+
+  useEffect(() => {
+    setShowFilterPanel(!isMobile);
+  }, [isMobile]);
+
   const [filters, setFilters] = useState({ category: "All", distance: "Any", date: "Any" });
 
   const handleFilterChange = (key, value) => {
@@ -197,6 +213,16 @@ export default function ActivitiesNearMeTab() {
 
   const resetFilters = () => {
     setFilters({ category: "All", distance: "Any", date: "Any" });
+  };
+
+  const handleToggleFilterPanel = () => {
+    setShowFilterPanel((previous) => !previous);
+  };
+
+  const handleApplyFilters = () => {
+    if (isMobile) {
+      setShowFilterPanel(false);
+    }
   };
 
   const nearbyActivities = useMemo(() => {
@@ -232,75 +258,123 @@ export default function ActivitiesNearMeTab() {
     );
   }
 
+  const filtersGrid = (
+    <div className={`grid gap-4 sm:grid-cols-3 ${isMobile ? "mt-4" : "mt-6"}`}>
+      <div className="flex flex-col gap-1">
+        <label className="text-xs uppercase tracking-wide text-gray-500">Category</label>
+        <select
+          value={filters.category}
+          onChange={(e) => handleFilterChange("category", e.target.value)}
+          className="rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+        >
+          <option value="All">All categories</option>
+          {categories.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-xs uppercase tracking-wide text-gray-500">Distance</label>
+        <select
+          value={filters.distance}
+          onChange={(e) => handleFilterChange("distance", e.target.value)}
+          className="rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+        >
+          {distanceOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-xs uppercase tracking-wide text-gray-500">Date</label>
+        <select
+          value={filters.date}
+          onChange={(e) => handleFilterChange("date", e.target.value)}
+          className="rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+        >
+          {dateOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </div>
+    </div>
+  );
+
   const categoryCounters = {};
 
   return (
     <section className="space-y-8">
       <div className="rounded-3xl bg-white/80 backdrop-blur border border-white/50 shadow-xl p-6 md:p-10">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-          <div>
-            <h2 className="text-3xl font-extrabold text-gray-900">Activities near you</h2>
-            <p className="text-gray-600 mt-2 max-w-xl">
-              Based on your current city and GPS radius. Adjust filters to narrow results by
-              category, date, or distance.
-            </p>
-          </div>
-
-          <button
-            onClick={resetFilters}
-            className="self-start md:self-auto text-sm font-semibold text-indigo-600 hover:text-pink-500 transition"
-          >
-            Reset filters
-          </button>
-        </div>
-
-        <div className="grid sm:grid-cols-3 gap-4 mt-6">
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-gray-500">Category</label>
-            <select
-              value={filters.category}
-              onChange={(e) => handleFilterChange("category", e.target.value)}
-              className="rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+        {isMobile ? (
+          <div className="space-y-4">
+            <button
+              type="button"
+              onClick={handleToggleFilterPanel}
+              className="inline-flex w-full items-center justify-center gap-2 rounded-full border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-600 shadow-sm transition hover:border-indigo-300 hover:text-pink-500"
+              aria-expanded={showFilterPanel}
             >
-              <option value="All">All categories</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
+              <span aria-hidden="true" className="flex h-4 w-4 items-center justify-center">
+                <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M3 5h14M5 10h10M7 15h6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </span>
+              <span>{showFilterPanel ? "Hide filters" : "Filter"}</span>
+            </button>
+            {showFilterPanel ? (
+              <>
+                {filtersGrid}
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <motion.button
+                    type="button"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={handleApplyFilters}
+                    className="flex-1 rounded-full bg-gradient-to-r from-indigo-600 to-pink-500 px-5 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-xl"
+                  >
+                    Apply filters
+                  </motion.button>
+                  <button
+                    type="button"
+                    onClick={resetFilters}
+                    className="text-sm font-semibold text-gray-500 transition hover:text-indigo-600"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </>
+            ) : null}
           </div>
+        ) : (
+          <>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div>
+                <h2 className="text-3xl font-extrabold text-gray-900">Activities near you</h2>
+                <p className="text-gray-600 mt-2 max-w-xl">
+                  Based on your current city and GPS radius. Adjust filters to narrow results by
+                  category, date, or distance.
+                </p>
+              </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-gray-500">Distance</label>
-            <select
-              value={filters.distance}
-              onChange={(e) => handleFilterChange("distance", e.target.value)}
-              className="rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-            >
-              {distanceOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
+              <button
+                type="button"
+                onClick={resetFilters}
+                className="self-start md:self-auto text-sm font-semibold text-indigo-600 hover:text-pink-500 transition"
+              >
+                Reset filters
+              </button>
+            </div>
 
-          <div className="flex flex-col gap-1">
-            <label className="text-xs uppercase tracking-wide text-gray-500">Date</label>
-            <select
-              value={filters.date}
-              onChange={(e) => handleFilterChange("date", e.target.value)}
-              className="rounded-2xl border border-gray-200 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-            >
-              {dateOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+            {filtersGrid}
+          </>
+        )}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
