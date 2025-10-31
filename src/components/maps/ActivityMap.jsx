@@ -140,7 +140,11 @@ function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter,
       });
 
       marker.on("click", (event) => {
-        event.originalEvent?.stopPropagation();
+        if (event.originalEvent) {
+          event.originalEvent.preventDefault();
+          event.originalEvent.stopPropagation();
+        }
+        L.DomEvent.stop(event);
         handleSelect(activity.id);
         marker.openTooltip();
       });
