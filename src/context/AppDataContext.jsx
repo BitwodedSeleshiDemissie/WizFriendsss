@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { resolvePlaceFromText } from "../lib/placeSuggestions";
 import { useAuth } from "./AuthContext";
 import {
   DEFAULT_GROUP_IMAGE,
@@ -166,7 +167,7 @@ function normaliseActivity(row) {
       0
     );
   const tags = ensureStringArray(row.tags ?? []);
-  const latitude = ensureNumber(
+  const latitudeRaw = ensureNumber(
     row.latitude ??
       row.lat ??
       row.latDegrees ??
@@ -174,7 +175,7 @@ function normaliseActivity(row) {
       row.lat_decimal,
     null
   );
-  const longitude = ensureNumber(
+  const longitudeRaw = ensureNumber(
     row.longitude ??
       row.lng ??
       row.lon ??
@@ -184,6 +185,29 @@ function normaliseActivity(row) {
       row.lng_decimal,
     null
   );
+  const locationTextRaw = row.location ?? row.location_name ?? row.address ?? "";
+  const locationText = typeof locationTextRaw === "string" ? locationTextRaw.trim() : "";
+  const cityTextRaw = row.city ?? row.city_name ?? row.cityName ?? "";
+  const cityText =
+    typeof cityTextRaw === "string" && cityTextRaw.trim() ? cityTextRaw.trim() : "Cape Town";
+  const isVirtual = ensureBoolean(row.isVirtual ?? row.is_virtual ?? false);
+  const isNearby = ensureBoolean(row.isNearby ?? row.is_nearby ?? true);
+
+  let latitude = Number.isFinite(latitudeRaw) ? latitudeRaw : null;
+  let longitude = Number.isFinite(longitudeRaw) ? longitudeRaw : null;
+
+  if (!isVirtual && (latitude == null || longitude == null)) {
+    const resolved = resolvePlaceFromText({ location: locationText, city: cityText });
+    if (resolved) {
+      if (latitude == null && typeof resolved.latitude === "number") {
+        latitude = resolved.latitude;
+      }
+      if (longitude == null && typeof resolved.longitude === "number") {
+        longitude = resolved.longitude;
+      }
+    }
+  }
+
   return {
     id: row.id ?? generateId(),
     title: row.title ?? "Untitled activity",
@@ -192,8 +216,8 @@ function normaliseActivity(row) {
     dateTime,
     startTime: dateTime,
     endTime,
-    city: row.city ?? "Cape Town",
-    location: row.location ?? row.location_name ?? row.address ?? "",
+    city: cityText,
+    location: locationText,
     locationName: row.location_name ?? row.location ?? "",
     address: row.address ?? row.location ?? "",
     host: row.host ?? row.host_name ?? row.hostName ?? "Community Host",
@@ -207,12 +231,12 @@ function normaliseActivity(row) {
     attendees,
     tags,
     featured: ensureBoolean(row.featured ?? row.isFeatured ?? row.is_featured ?? false),
-    isNearby: ensureBoolean(row.isNearby ?? row.is_nearby ?? true),
-    isVirtual: ensureBoolean(row.isVirtual ?? row.is_virtual ?? false),
-    visibility: row.visibility ?? (ensureBoolean(row.is_virtual ?? row.isVirtual) ? "private" : "public"),
+    isNearby,
+    isVirtual,
+    visibility: row.visibility ?? (isVirtual ? "private" : "public"),
     maxAttendees: row.maxAttendees ?? row.max_attendees ?? null,
-    latitude: Number.isFinite(latitude) ? latitude : null,
-    longitude: Number.isFinite(longitude) ? longitude : null,
+    latitude,
+    longitude,
     createdAt: coerceIso(row.created_at ?? row.createdAt) ?? new Date().toISOString(),
     updatedAt: coerceIso(row.updated_at ?? row.updatedAt),
   };
@@ -2200,3 +2224,4 @@ export const useAppData = () => {
   }
   return context;
 };
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import ActivitiesNearMeTab from "../../components/tabs/ActivitiesNearMeTab";
@@ -12,6 +12,7 @@ import ProfileTab from "../../components/tabs/ProfileTab";
 import BottomTabNav from "../../components/BottomTabNav";
 import { AppDataProvider, useAppData } from "../../context/AppDataContext";
 import ProtectedRoute from "../../components/ProtectedRoute";
+import { searchPlaceSuggestions } from "../../lib/placeSuggestions";
 
 const TAB_CONFIG = [
   { id: "nearby", label: "Near Me", icon: "📍" },
@@ -85,6 +86,8 @@ function HomeContent() {
       date: "",
       time: "",
       location: "",
+      lat: null,
+      lng: null,
       city: userProfile.currentCity,
       distance: "5",
       isFeatured: false,
@@ -94,6 +97,65 @@ function HomeContent() {
   );
 
   const [createForm, setCreateForm] = useState(defaultForm);
+  const [locationDropdownOpen, setLocationDropdownOpen] = useState(false);
+  const locationBlurTimeout = useRef(null);
+
+  const locationSuggestions = useMemo(() => {
+    const query = createForm.location?.trim();
+    const baseCity = createForm.city?.trim() || userProfile.currentCity || "";
+    if (!query) {
+      return [];
+    }
+    return searchPlaceSuggestions(query, baseCity);
+  }, [createForm.location, createForm.city, userProfile.currentCity]);
+
+  const handleLocationChange = (event) => {
+    const value = event.target.value;
+    setCreateForm((prev) => ({
+      ...prev,
+      location: value,
+      lat: null,
+      lng: null,
+    }));
+    if (locationBlurTimeout.current) {
+      clearTimeout(locationBlurTimeout.current);
+      locationBlurTimeout.current = null;
+    }
+    setLocationDropdownOpen(true);
+  };
+
+  const handleLocationFocus = () => {
+    if (locationBlurTimeout.current) {
+      clearTimeout(locationBlurTimeout.current);
+      locationBlurTimeout.current = null;
+    }
+    setLocationDropdownOpen(true);
+  };
+
+  const handleLocationBlur = () => {
+    if (locationBlurTimeout.current) {
+      clearTimeout(locationBlurTimeout.current);
+    }
+    locationBlurTimeout.current = setTimeout(() => {
+      setLocationDropdownOpen(false);
+    }, 120);
+  };
+
+  const handleSelectLocationSuggestion = (suggestion) => {
+    setCreateForm((prev) => ({
+      ...prev,
+      location: suggestion.name,
+      city: prev.city || suggestion.city,
+      lat: typeof suggestion.latitude === "number" ? suggestion.latitude : prev.lat,
+      lng: typeof suggestion.longitude === "number" ? suggestion.longitude : prev.lng,
+    }));
+    if (locationBlurTimeout.current) {
+      clearTimeout(locationBlurTimeout.current);
+      locationBlurTimeout.current = null;
+    }
+    setLocationDropdownOpen(false);
+  };
+
 
   const openCreateModal = useCallback(() => {
     setShowCreateModal(true);
@@ -116,6 +178,14 @@ function HomeContent() {
   useEffect(() => {
     setCreateForm(defaultForm);
   }, [defaultForm]);
+
+  useEffect(() => {
+    return () => {
+      if (locationBlurTimeout.current) {
+        clearTimeout(locationBlurTimeout.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (tabParam && TAB_CONFIG.some((tab) => tab.id === tabParam)) {
@@ -304,29 +374,45 @@ function HomeContent() {
               </div>
               <form onSubmit={handleCreateActivitySubmit} className="space-y-4">
                 <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={createForm.location}
+                      onChange={handleLocationChange}
+                      onFocus={handleLocationFocus}
+                      onBlur={handleLocationBlur}
+                      placeholder="Location"
+                      autoComplete="off"
+                      className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      required
+                    />
+                    {locationDropdownOpen && locationSuggestions.length > 0 && (
+                      <ul className="absolute z-20 mt-1 w-full overflow-hidden rounded-2xl border border-indigo-100 bg-white shadow-lg">
+                        {locationSuggestions.map((suggestion) => (
+                          <li key={suggestion.id}>
+                            <button
+                              type="button"
+                              onMouseDown={(event) => event.preventDefault()}
+                              onClick={() => handleSelectLocationSuggestion(suggestion)}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-indigo-50 focus:outline-none"
+                            >
+                              <span className="block font-medium text-gray-800">{suggestion.name}</span>
+                              <span className="block text-xs text-gray-500">
+                                {suggestion.subtitle || `${suggestion.city}, ${suggestion.region}`}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
                   <input
                     type="text"
-                    value={createForm.title}
-                    onChange={(event) => setCreateForm((prev) => ({ ...prev, title: event.target.value }))}
-                    placeholder="Activity title"
+                    value={createForm.city}
+                    onChange={(event) => setCreateForm((prev) => ({ ...prev, city: event.target.value }))}
+                    placeholder="City"
                     className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    required
                   />
-                  <select
-                    value={createForm.category}
-                    onChange={(event) => setCreateForm((prev) => ({ ...prev, category: event.target.value }))}
-                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    required
-                  >
-                    <option value="" disabled>
-                      Select a category
-                    </option>
-                    {CATEGORY_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {option}
-                      </option>
-                    ))}
-                  </select>
                 </div>
                 <textarea
                   value={createForm.description}
