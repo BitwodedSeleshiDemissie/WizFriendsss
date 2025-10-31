@@ -242,7 +242,9 @@ function calculateDistanceKm(origin, destination) {
       Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return EARTH_RADIUS_KM * c;
-}\r\n\r\nexport default function ActivitiesNearMeTab() {
+}
+
+export default function ActivitiesNearMeTab() {
   const {
     activities,
     categories,
