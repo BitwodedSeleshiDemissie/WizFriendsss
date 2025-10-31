@@ -25,6 +25,12 @@ const SELECTED_MARKER_STYLE = {
   weight: 3,
 };
 
+const USER_LOCATION_ICON = L.divIcon({
+  className: "activity-map__user-marker leaflet-div-icon",
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+});
+
 function escapeHtml(value = "") {
   return String(value)
     .replace(/&/g, "&amp;")
@@ -38,6 +44,7 @@ function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter,
   const containerRef = useRef(null);
   const mapRef = useRef(null);
   const markersLayerRef = useRef(null);
+  const userLocationMarkerRef = useRef(null);
   const onSelectRef = useRef(onSelect);
   const onLocateRef = useRef(onLocate);
   const initialCenterRef = useRef(fallbackCenter);
@@ -96,6 +103,10 @@ function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter,
       map.remove();
       mapRef.current = null;
       markersLayerRef.current = null;
+      if (userLocationMarkerRef.current) {
+        userLocationMarkerRef.current.remove();
+        userLocationMarkerRef.current = null;
+      }
     };
   }, [isClient]);
 
@@ -131,6 +142,7 @@ function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter,
       marker.on("click", (event) => {
         event.originalEvent?.stopPropagation();
         handleSelect(activity.id);
+        marker.openTooltip();
       });
 
       if (!isSelected) {
@@ -142,6 +154,7 @@ function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter,
 
       if (isSelected) {
         marker.bringToFront();
+        marker.openTooltip();
       }
     });
   }, [validActivities, selectedActivityId, handleSelect]);
@@ -162,14 +175,34 @@ function ActivityMap({ activities, selectedActivityId, onSelect, fallbackCenter,
   const canLocate = isClient && typeof navigator !== "undefined" && !!navigator.geolocation;
 
   const handleLocate = useCallback(() => {
-    if (!canLocate || !mapRef.current) return;
+    const map = mapRef.current;
+    if (!canLocate || !map) return;
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (position) => {
         setLocating(false);
         const { latitude, longitude } = position.coords;
-        mapRef.current.flyTo([latitude, longitude], Math.max(mapRef.current.getZoom(), 14), { duration: 0.6 });
-        onLocateRef.current?.([latitude, longitude]);
+        const location = [latitude, longitude];
+        map.flyTo(location, Math.max(map.getZoom(), 14), { duration: 0.6 });
+
+        if (userLocationMarkerRef.current) {
+          userLocationMarkerRef.current.setLatLng(location);
+        } else {
+          userLocationMarkerRef.current = L.marker(location, {
+            icon: USER_LOCATION_ICON,
+            interactive: false,
+            keyboard: false,
+          }).addTo(map);
+        }
+
+        if (
+          userLocationMarkerRef.current &&
+          typeof userLocationMarkerRef.current.setZIndexOffset === "function"
+        ) {
+          userLocationMarkerRef.current.setZIndexOffset(1000);
+        }
+
+        onLocateRef.current?.(location);
       },
       () => setLocating(false),
       { enableHighAccuracy: true, timeout: 10000 }

@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useAppData } from "../../context/AppDataContext";
 
@@ -362,9 +362,13 @@ export default function ActivitiesNearMeTab() {
   const waitlistedSelected = selectedActivity ? waitlistedActivities.includes(selectedActivity.id) : false;
   const savedSelected = selectedActivity ? savedActivities.includes(selectedActivity.id) : false;
 
-  const handleSelectActivity = (activityId) => {
-    setSelectedActivityId(activityId);
-  };
+  const handleSelectActivity = useCallback((activityId) => {
+    setSelectedActivityId(activityId ?? null);
+  }, []);
+
+  const handleUserLocate = useCallback(() => {
+    setSelectedActivityId(null);
+  }, []);
 
   const isMapView = viewMode === "map";
   const isListView = !isMapView;
@@ -372,7 +376,7 @@ export default function ActivitiesNearMeTab() {
   if (loadingActivities) {
     return (
       <section className="rounded-3xl bg-white/80 backdrop-blur border border-white/50 shadow-xl p-10 flex items-center justify-center min-h-[40vh]">
-        <p className="text-sm font-semibold text-indigo-500">Loading activities around you…</p>
+        <p className="text-sm font-semibold text-indigo-500">Loading activities around you...</p>
       </section>
     );
   }
@@ -540,7 +544,7 @@ export default function ActivitiesNearMeTab() {
                   selectedActivityId={selectedActivityId}
                   onSelect={handleSelectActivity}
                   fallbackCenter={fallbackCenter}
-                  onLocate={() => setSelectedActivityId(null)}
+                  onLocate={handleUserLocate}
                 />
               </div>
               <motion.div
@@ -774,4 +778,3 @@ export default function ActivitiesNearMeTab() {
     </section>
   );
 }
-
