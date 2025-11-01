@@ -782,7 +782,7 @@ function ExperienceList({ items, onSelect }) {
       {isEmpty ? (
         <p className="text-sm text-gray-400">Join an activity to see it here.</p>
       ) : (
-        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+        <ul className="grid grid-cols-5 gap-2 sm:grid-cols-6 md:grid-cols-8">
           {items.map((activity) => {
             const date = activity?.dateTime ? new Date(activity.dateTime) : null;
             const hasDate = date && !Number.isNaN(date.getTime());
@@ -791,20 +791,20 @@ function ExperienceList({ items, onSelect }) {
                   month: "short",
                   day: "numeric",
                 })
-              : "Date to be announced";
+              : "Date TBA";
             const initial = activity?.title?.trim()?.charAt(0)?.toUpperCase() || "•";
             return (
               <li key={activity.id} className="flex justify-center">
                 <button
                   type="button"
                   onClick={() => onSelect?.(activity)}
-                  className="flex h-32 w-[120px] flex-col items-center justify-center gap-2 rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-indigo-50/40 px-3 py-3 text-center shadow-sm transition hover:-translate-y-1 hover:border-indigo-200 hover:shadow-md sm:w-[140px]"
+                  className="flex h-24 w-full max-w-[82px] flex-col items-center justify-center gap-1 rounded-xl border border-gray-100 bg-white/90 px-2 py-2 text-center shadow-sm transition hover:-translate-y-1 hover:border-indigo-200 hover:shadow-md"
                 >
-                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-base font-semibold text-white shadow-sm">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-xs font-semibold text-white shadow-sm">
                     {initial}
                   </span>
-                  <span className="line-clamp-2 text-xs font-semibold text-gray-900">{activity.title}</span>
-                  <span className="text-[0.65rem] text-gray-500">{dateLabel}</span>
+                  <span className="line-clamp-2 text-[0.6rem] font-semibold text-gray-900 leading-tight">{activity.title}</span>
+                  <span className="text-[0.55rem] text-gray-500">{dateLabel}</span>
                 </button>
               </li>
             );
