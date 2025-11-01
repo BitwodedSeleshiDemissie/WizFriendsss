@@ -420,7 +420,7 @@ export default function ProfileTab() {
       <ExperienceList items={joined} onSelect={setSelectedExperience} />
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div id="profile-about-card" className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-7 space-y-5">
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-7 space-y-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="space-y-2 text-center sm:text-left">
               <h3 className="text-xl font-semibold text-gray-900">About {firstName}</h3>
@@ -673,8 +673,9 @@ export default function ProfileTab() {
         </div>
       </div>
 
-      <div className="hidden lg:grid lg:grid-cols-2 gap-6">
+      <ExperienceList items={joined} onSelect={setSelectedExperience} />
 
+      <div className="hidden lg:grid lg:grid-cols-2 gap-6">
         <Section
           title="Notifications"
           description="Stay in the loop with reminders and invites."
@@ -685,6 +686,21 @@ export default function ProfileTab() {
               <p className="text-sm font-semibold text-gray-800">{notification.title}</p>
               <p className="text-xs text-gray-500">{formatNotificationTime(notification)}</p>
               <p className="text-xs text-gray-500">{notification.message}</p>
+            </div>
+          )}
+        />
+
+        <Section
+          title="Favourites"
+          description="Saved events to revisit later."
+          emptyHint="Tap the heart icon on activities you like."
+          items={favourites}
+          renderItem={(activity) => (
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-gray-800">{activity.title}</p>
+              <p className="text-xs text-gray-500">
+                {activity.city} - {activity.category}
+              </p>
             </div>
           )}
         />
@@ -707,21 +723,19 @@ export default function ProfileTab() {
         />
 
         <Section
-          title="Favourites"
-          description="Saved events to revisit later."
-          emptyHint="Tap the heart icon on activities you like."
-          items={favourites}
-          renderItem={(activity) => (
+          title="Notifications"
+          description="Stay in the loop with reminders and invites."
+          emptyHint="You are all caught up."
+          items={notifications}
+          renderItem={(notification) => (
             <div className="space-y-1">
-              <p className="text-sm font-semibold text-gray-800">{activity.title}</p>
-              <p className="text-xs text-gray-500">
-                {activity.city} - {activity.category}
-              </p>
+              <p className="text-sm font-semibold text-gray-800">{notification.title}</p>
+              <p className="text-xs text-gray-500">{formatNotificationTime(notification)}</p>
+              <p className="text-xs text-gray-500">{notification.message}</p>
             </div>
           )}
         />
       </div>
-
       <div id="profile-settings" className="hidden lg:block rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-8 space-y-6">
         <h3 className="text-xl font-semibold text-gray-900">Settings</h3>
         <div className="grid sm:grid-cols-2 gap-4 text-sm text-gray-600">
