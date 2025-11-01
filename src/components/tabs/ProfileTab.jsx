@@ -782,7 +782,7 @@ function ExperienceList({ items, onSelect }) {
       {isEmpty ? (
         <p className="text-sm text-gray-400">Join an activity to see it here.</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {items.map((activity) => {
             const date = activity?.dateTime ? new Date(activity.dateTime) : null;
             const hasDate = date && !Number.isNaN(date.getTime());
@@ -790,26 +790,21 @@ function ExperienceList({ items, onSelect }) {
               ? date.toLocaleString(undefined, {
                   month: "short",
                   day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
                 })
               : "Date to be announced";
             const initial = activity?.title?.trim()?.charAt(0)?.toUpperCase() || "•";
             return (
-              <li key={activity.id}>
+              <li key={activity.id} className="flex justify-center">
                 <button
                   type="button"
                   onClick={() => onSelect?.(activity)}
-                  className="flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-2 text-left transition hover:border-indigo-200 hover:bg-indigo-50"
+                  className="flex h-32 w-full max-w-[140px] flex-col items-center justify-center gap-2 rounded-2xl border border-gray-100 bg-gradient-to-br from-white to-indigo-50/40 px-3 py-3 text-center shadow-sm transition hover:-translate-y-1 hover:border-indigo-200 hover:shadow-md"
                 >
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-sm font-semibold text-white shadow-sm">
+                  <span className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-base font-semibold text-white shadow-sm">
                     {initial}
                   </span>
-                  <div className="flex min-w-0 flex-1 flex-col">
-                    <span className="truncate text-sm font-semibold text-gray-900">{activity.title}</span>
-                    <span className="text-xs text-gray-500">{dateLabel}</span>
-                  </div>
-                  <span className="text-xs font-semibold text-indigo-500">View</span>
+                  <span className="line-clamp-2 text-xs font-semibold text-gray-900">{activity.title}</span>
+                  <span className="text-[0.65rem] text-gray-500">{dateLabel}</span>
                 </button>
               </li>
             );
