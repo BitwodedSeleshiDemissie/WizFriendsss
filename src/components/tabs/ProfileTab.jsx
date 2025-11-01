@@ -80,6 +80,7 @@ export default function ProfileTab() {
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [showActivityLog, setShowActivityLog] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [selectedExperience, setSelectedExperience] = useState(null);
   const [profileForm, setProfileForm] = useState(() => mapProfileToForm(user));
   const [profileFormError, setProfileFormError] = useState("");
   const [profileFormSuccess, setProfileFormSuccess] = useState("");
@@ -416,6 +417,8 @@ export default function ProfileTab() {
 
       <StatsRow stats={statsSummary} />
 
+      <ExperienceList items={joined} onSelect={setSelectedExperience} />
+
       <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div id="profile-about-card" className="rounded-2xl border border-gray-200 bg-white shadow-sm p-5 md:p-7 space-y-5">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -671,23 +674,6 @@ export default function ProfileTab() {
       </div>
 
       <div className="hidden lg:grid lg:grid-cols-2 gap-6">
-        <Section
-          title="My activities"
-          description="Everything you have joined or created."
-          emptyHint="Join an activity to see it here."
-          items={joined}
-          renderItem={(activity) => {
-            const eventDate = new Date(activity.dateTime);
-            return (
-              <div className="space-y-1">
-                <p className="text-sm font-semibold text-gray-800">{activity.title}</p>
-                <p className="text-xs text-gray-500">
-                  {eventDate.toLocaleString(undefined, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} - {activity.location}
-                </p>
-              </div>
-            );
-          }}
-        />
 
         <Section
           title="Notifications"
@@ -758,10 +744,65 @@ export default function ProfileTab() {
         </div>
       </div>
       </section>
+      {selectedExperience ? (
+        <ExperienceDetailOverlay
+          experience={selectedExperience}
+          onClose={() => setSelectedExperience(null)}
+        />
+      ) : null}
       {showActivityLog ? (
         <ActivityLogOverlay entries={activityLogEntries} onClose={() => setShowActivityLog(false)} />
       ) : null}
     </>
+  );
+}
+
+function ExperienceList({ items, onSelect }) {
+  const isEmpty = items.length === 0;
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white shadow-sm p-4 space-y-3">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-gray-900">My activities</h3>
+        {!isEmpty ? <span className="text-xs text-gray-500">{items.length}</span> : null}
+      </div>
+      {isEmpty ? (
+        <p className="text-sm text-gray-400">Join an activity to see it here.</p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((activity) => {
+            const date = activity?.dateTime ? new Date(activity.dateTime) : null;
+            const hasDate = date && !Number.isNaN(date.getTime());
+            const dateLabel = hasDate
+              ? date.toLocaleString(undefined, {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })
+              : "Date to be announced";
+            const initial = activity?.title?.trim()?.charAt(0)?.toUpperCase() || "•";
+            return (
+              <li key={activity.id}>
+                <button
+                  type="button"
+                  onClick={() => onSelect?.(activity)}
+                  className="flex w-full items-center gap-3 rounded-2xl border border-transparent px-3 py-2 text-left transition hover:border-indigo-200 hover:bg-indigo-50"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-pink-500 text-sm font-semibold text-white shadow-sm">
+                    {initial}
+                  </span>
+                  <div className="flex min-w-0 flex-1 flex-col">
+                    <span className="truncate text-sm font-semibold text-gray-900">{activity.title}</span>
+                    <span className="text-xs text-gray-500">{dateLabel}</span>
+                  </div>
+                  <span className="text-xs font-semibold text-indigo-500">View</span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -800,6 +841,74 @@ function Section({ title, description, emptyHint, items, renderItem }) {
             </div>
           ))
         )}
+      </div>
+    </div>
+  );
+}
+
+function ExperienceDetailOverlay({ experience, onClose }) {
+  if (!experience) return null;
+  const date = experience.dateTime ? new Date(experience.dateTime) : null;
+  const hasDate = date && !Number.isNaN(date.getTime());
+  const dateLabel = hasDate
+    ? date.toLocaleString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : "Date to be announced";
+  const locationParts = [experience.location, experience.city].filter(Boolean);
+  const locationLabel = locationParts.length > 0 ? locationParts.join(", ") : "Location to be announced";
+  const hostLabel = experience.host || "Community host";
+  const tags = Array.isArray(experience.tags) ? experience.tags.filter(Boolean) : [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-xl overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl sm:mx-6">
+        <div className="flex items-center gap-3 border-b border-gray-100 px-5 py-4">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-2 rounded-full border border-gray-200 px-3 py-1 text-xs font-semibold text-gray-600 transition hover:border-indigo-300 hover:text-indigo-600"
+          >
+            ← Back
+          </button>
+          <h3 className="flex-1 truncate text-center text-base font-semibold text-gray-900 sm:text-left">
+            {experience.title}
+          </h3>
+          <span className="hidden w-12 sm:block" />
+        </div>
+        <div className="space-y-4 px-5 py-4 text-sm text-gray-600">
+          <div className="rounded-2xl bg-gray-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-500">When</p>
+            <p className="mt-1 text-sm font-semibold text-gray-900">{dateLabel}</p>
+          </div>
+          <div className="rounded-2xl bg-gray-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-500">Where</p>
+            <p className="mt-1 text-sm font-semibold text-gray-900">{locationLabel}</p>
+          </div>
+          <div className="rounded-2xl bg-gray-50 px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-500">Host</p>
+            <p className="mt-1 text-sm font-semibold text-gray-900">{hostLabel}</p>
+          </div>
+          {experience.description ? (
+            <div className="rounded-2xl border border-gray-100 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-indigo-500">Details</p>
+              <p className="mt-2 leading-relaxed text-gray-700">{experience.description}</p>
+            </div>
+          ) : null}
+          {tags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {tags.slice(0, 12).map((tag) => (
+                <span key={tag} className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-600">
+                  #{tag}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
