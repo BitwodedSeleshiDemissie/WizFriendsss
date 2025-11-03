@@ -1559,122 +1559,131 @@ export function AppDataProvider({ children }) {
         let threshold = existingIdea?.endorsementThreshold ?? ENDORSEMENT_THRESHOLD;
         let launchedActivityId = existingIdea?.launchedActivityId ?? null;
         let status = existingIdea?.status ?? "open";
+        let remoteIdea = existingIdea ?? null;
 
         if (supabase) {
-          const { data, error } = await supabase
-            .from(TABLES.ideas)
-            .select(
-              "supporters, endorsement_count, endorsement_threshold, status, launched_activity_id, created_by, title, description, ai_suggestion, prompt_text, category, tags, preferred_location, city, proposed_start, proposed_end, suggested_time"
-            )
-            .eq("id", ideaId)
-            .maybeSingle();
-          if (error) throw error;
-          supporters = ensureStringArray(data?.supporters ?? supporters);
-          if (!supporters.includes(userId)) {
-            supporters.push(userId);
+          try {
+            const { data, error } = await supabase
+              .from(TABLES.ideas)
+              .select(
+                "supporters, endorsement_count, endorsement_threshold, status, launched_activity_id, created_by, title, description, ai_suggestion, prompt_text, category, tags, preferred_location, city, proposed_start, proposed_end, suggested_time"
+              )
+              .eq("id", ideaId)
+              .maybeSingle();
+            if (error) throw error;
+            if (data) {
+              supporters = ensureStringArray(data.supporters ?? supporters);
+              if (!supporters.includes(userId)) {
+                supporters.push(userId);
+              }
+              threshold = ensureNumber(data.endorsement_threshold ?? threshold, ENDORSEMENT_THRESHOLD);
+              launchedActivityId = data.launched_activity_id ?? launchedActivityId ?? null;
+              status = data.status ?? status ?? "open";
+              remoteIdea = normaliseIdea(data) ?? remoteIdea;
+            }
+          } catch (fetchError) {
+            console.error("Failed to refresh idea before endorsement", fetchError);
           }
-          threshold = ensureNumber(data?.endorsement_threshold ?? threshold, ENDORSEMENT_THRESHOLD);
-          launchedActivityId = data?.launched_activity_id ?? launchedActivityId ?? null;
-          status = data?.status ?? status ?? "open";
-
-          const effectiveThreshold = Math.max(
-            Number.isFinite(threshold) && threshold > 0 ? threshold : ENDORSEMENT_THRESHOLD,
-            ENDORSEMENT_THRESHOLD
-          );
-
-          const shouldLaunch = supporters.length >= effectiveThreshold;
-          if (shouldLaunch && !launchedActivityId) {
-            const ideaDetails = existingIdea ?? normaliseIdea(data);
-            const launchResult = await launchIdeaAsActivity(ideaDetails, supporters);
-            launchedActivityId = launchResult?.activityId ?? launchedActivityId ?? null;
-            status = "launched";
-          } else if (shouldLaunch) {
-            status = "launched";
-          } else if (supporters.length > 0 && supporters.length >= Math.max(effectiveThreshold - 1, 1)) {
-            status = status === "launched" ? status : "ready";
-          } else {
-            status = status ?? "open";
-          }
-
-          threshold = effectiveThreshold;
-          const updates = {
-            supporters,
-            endorsement_count: supporters.length,
-            status,
-            updated_at: new Date().toISOString(),
-          };
-          if (launchedActivityId) {
-            updates.launched_activity_id = launchedActivityId;
-          }
-          await supabase.from(TABLES.ideas).update(updates).eq("id", ideaId);
-          await supabase.from(TABLES.ideaEndorsements).upsert({
-            idea_id: ideaId,
-            user_id: userId,
-            endorsed_at: new Date().toISOString(),
-          });
-        } else {
-          const effectiveThreshold = Math.max(
-            Number.isFinite(threshold) && threshold > 0 ? threshold : ENDORSEMENT_THRESHOLD,
-            ENDORSEMENT_THRESHOLD
-          );
-          const shouldLaunch = supporters.length >= effectiveThreshold;
-          if (shouldLaunch && !launchedActivityId) {
-            const launchResult = await launchIdeaAsActivity(existingIdea, supporters);
-            launchedActivityId = launchResult?.activityId ?? launchedActivityId ?? null;
-            status = "launched";
-          } else if (shouldLaunch) {
-            status = "launched";
-          } else if (supporters.length > 0 && supporters.length >= Math.max(effectiveThreshold - 1, 1)) {
-            status = status === "launched" ? status : "ready";
-          } else {
-            status = status ?? "open";
-          }
-          threshold = effectiveThreshold;
         }
 
-        const uniqueSupporters = Array.from(new Set(supporters));
+        const uniqueSupporters = Array.from(
+          new Set(
+            supporters
+              .map((value) => (value == null ? "" : String(value).trim()))
+              .filter((value) => value.length > 0)
+          )
+        );
+        const effectiveThreshold = Math.max(
+          Number.isFinite(threshold) && threshold > 0 ? threshold : ENDORSEMENT_THRESHOLD,
+          ENDORSEMENT_THRESHOLD
+        );
+        const nearlyReached = uniqueSupporters.length >= Math.max(effectiveThreshold - 1, 1);
+        const readyToLaunch = uniqueSupporters.length >= effectiveThreshold;
+
+        let finalLaunchedId = launchedActivityId ?? null;
+        let finalStatus = status ?? "open";
+
+        if (readyToLaunch) {
+          if (!finalLaunchedId) {
+            try {
+              const launchResult = await launchIdeaAsActivity(remoteIdea, uniqueSupporters);
+              finalLaunchedId = launchResult?.activityId ?? finalLaunchedId;
+            } catch (launchError) {
+              console.error("Failed to auto-launch idea after endorsement", launchError);
+            }
+          }
+          finalStatus = finalLaunchedId ? "launched" : "ready";
+        } else if (nearlyReached && finalStatus !== "launched") {
+          finalStatus = "ready";
+        } else if (!finalStatus) {
+          finalStatus = "open";
+        }
 
         setIdeaEndorsements((previous) => (previous.includes(ideaId) ? previous : [...previous, ideaId]));
         setIdeas((previous) => {
           const updated = previous.map((idea) => {
             if (idea.id !== ideaId) return idea;
-            const currentCount = idea.endorsementCount ?? idea.supporters?.length ?? 0;
-            const nextCount = uniqueSupporters.length;
             const thresholdValue = Math.max(
               Number.isFinite(idea.endorsementThreshold) && idea.endorsementThreshold > 0
                 ? idea.endorsementThreshold
-                : threshold ?? ENDORSEMENT_THRESHOLD,
+                : effectiveThreshold,
               ENDORSEMENT_THRESHOLD
             );
-            const finalStatus =
-              launchedActivityId != null
+            const nextCount = uniqueSupporters.length;
+            const nextStatus =
+              finalLaunchedId != null
                 ? "launched"
                 : nextCount >= thresholdValue
                 ? idea.status === "launched"
                   ? idea.status
                   : "ready"
-                : status ?? idea.status ?? "open";
+                : finalStatus ?? idea.status ?? "open";
 
             return {
               ...idea,
               supporters: uniqueSupporters,
               endorsementCount: nextCount,
-              status: finalStatus,
+              status: nextStatus,
               endorsementThreshold: thresholdValue,
-              launchedActivityId: launchedActivityId ?? idea.launchedActivityId ?? null,
+              launchedActivityId: finalLaunchedId ?? idea.launchedActivityId ?? null,
             };
           });
           const filtered = updated.filter(shouldDisplayIdea);
           writeCollectionCache(IDEAS_CACHE_KEY, filtered);
           return filtered;
         });
+
+        if (supabase) {
+          try {
+            const payload = {
+              supporters: uniqueSupporters,
+              endorsement_count: uniqueSupporters.length,
+              endorsement_threshold: effectiveThreshold,
+              status: finalLaunchedId ? "launched" : finalStatus,
+              updated_at: new Date().toISOString(),
+            };
+            if (finalLaunchedId) {
+              payload.launched_activity_id = finalLaunchedId;
+            }
+            const { error: updateError } = await supabase.from(TABLES.ideas).update(payload).eq("id", ideaId);
+            if (updateError) throw updateError;
+
+            const { error: endorseError } = await supabase.from(TABLES.ideaEndorsements).upsert({
+              idea_id: ideaId,
+              user_id: userId,
+              endorsed_at: new Date().toISOString(),
+            });
+            if (endorseError) throw endorseError;
+          } catch (syncError) {
+            console.error("Failed to sync endorsement with Supabase", syncError);
+          }
+        }
       } finally {
         setIsMutating(false);
       }
     },
     [ideaEndorsements, ideas, launchIdeaAsActivity, userId]
   );
-
   const createGroup = useCallback(
     async ({ name, description, tags, isPrivate, image }) => {
       if (!userId) throw new Error("Please sign in first.");
@@ -2292,5 +2301,6 @@ export const useAppData = () => {
   }
   return context;
 };
+
 
 
