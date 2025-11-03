@@ -1606,13 +1606,13 @@ export function AppDataProvider({ children }) {
         if (readyToLaunch) {
           if (!finalLaunchedId) {
             try {
-              const launchResult = await launchIdeaAsActivity(remoteIdea, uniqueSupporters);
+              const launchResult = await launchIdeaAsActivity(remoteIdea ?? existingIdea ?? null, uniqueSupporters);
               finalLaunchedId = launchResult?.activityId ?? finalLaunchedId;
             } catch (launchError) {
               console.error("Failed to auto-launch idea after endorsement", launchError);
             }
           }
-          finalStatus = finalLaunchedId ? "launched" : "ready";
+          finalStatus = "launched";
         } else if (nearlyReached && finalStatus !== "launched") {
           finalStatus = "ready";
         } else if (!finalStatus) {
@@ -1631,7 +1631,7 @@ export function AppDataProvider({ children }) {
             );
             const nextCount = uniqueSupporters.length;
             const nextStatus =
-              finalLaunchedId != null
+              finalLaunchedId != null || finalStatus === "launched"
                 ? "launched"
                 : nextCount >= thresholdValue
                 ? idea.status === "launched"
@@ -1659,7 +1659,7 @@ export function AppDataProvider({ children }) {
               supporters: uniqueSupporters,
               endorsement_count: uniqueSupporters.length,
               endorsement_threshold: effectiveThreshold,
-              status: finalLaunchedId ? "launched" : finalStatus,
+              status: finalStatus,
               updated_at: new Date().toISOString(),
             };
             if (finalLaunchedId) {
@@ -2301,6 +2301,7 @@ export const useAppData = () => {
   }
   return context;
 };
+
 
 
 
