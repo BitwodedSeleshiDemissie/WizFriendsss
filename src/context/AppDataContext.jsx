@@ -39,14 +39,14 @@ const TABLES = {
   activityJoins: "user_activity_join",
   activitySaves: "user_activity_save",
   groupMembers: "group_members",
-  ideaEndorsements: "idea_endorse",
+  ideaEndorsements: "idea_endorse",`n  userFollows: "user_follows",
   groupBulletins: "group_bulletins",
   groupMessages: "group_messages",
 };
 
 const ACTIVITIES_CACHE_KEY = "wizfriends.cache.activities";
 const GROUPS_CACHE_KEY = "wizfriends.cache.groups";
-const IDEAS_CACHE_KEY = "wizfriends.cache.ideas";
+const IDEAS_CACHE_KEY = "wizfriends.cache.ideas";`nconst FOLLOWS_CACHE_KEY = "wizfriends.cache.follows";
 
 function generateId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -348,6 +348,25 @@ function normaliseIdea(row) {
 }
 
 
+function normaliseFollow(row) {
+  if (!row) return null;
+  const followerId = row.followerId ?? row.follower_id ?? row.sourceId ?? row.source_id ?? null;
+  const followingId = row.followingId ?? row.following_id ?? row.targetId ?? row.target_id ?? null;
+  if (!followerId || !followingId) return null;
+  const targetNameCandidates = [row.targetName, row.target_name, row.followingName, row.following_name, row.displayName, row.display_name];
+  const followerNameCandidates = [row.followerName, row.follower_name, row.sourceName, row.source_name];
+  const targetName = targetNameCandidates.find((value) => typeof value === "string" && value.trim().length > 0);
+  const followerName = followerNameCandidates.find((value) => typeof value === "string" && value.trim().length > 0);
+  return {
+    id: row.id ?? `${followerId}_${followingId}`,
+    followerId,
+    followingId,
+    targetName: targetName ? targetName.trim() : "",
+    followerName: followerName ? followerName.trim() : "",
+    createdAt: coerceIso(row.created_at ?? row.createdAt) ?? new Date().toISOString(),
+  };
+}
+
 function shouldDisplayIdea(idea) {
   return Boolean(idea) && idea.status !== "launched" && !idea.launchedActivityId;
 }
@@ -493,6 +512,9 @@ export function AppDataProvider({ children }) {
   const [activitySaves, setActivitySaves] = useState([]);
   const [groupMemberships, setGroupMemberships] = useState([]);
   const [groupMessages, setGroupMessages] = useState({});
+  const [followConnections, setFollowConnections] = useState(() =>
+    readCollectionCache(FOLLOWS_CACHE_KEY, INITIAL_FOLLOWS.map(normaliseFollow).filter(Boolean))
+  );
 
   const [ideaEndorsements, setIdeaEndorsements] = useState([]);
 
@@ -537,6 +559,58 @@ export function AppDataProvider({ children }) {
     () => groupMemberships.map((item) => item.groupId),
     [groupMemberships]
   );
+
+  const followingIds = useMemo(() => {
+    if (!userId) return [];
+    const ids = followConnections
+      .filter((connection) => connection.followerId === userId)
+      .map((connection) => connection.followingId)
+      .filter(Boolean);
+    return Array.from(new Set(ids));
+  }, [followConnections, userId]);
+
+  const followersIds = useMemo(() => {
+    if (!userId) return [];
+    const ids = followConnections
+      .filter((connection) => connection.followingId === userId)
+      .map((connection) => connection.followerId)
+      .filter(Boolean);
+    return Array.from(new Set(ids));
+  }, [followConnections, userId]);
+
+  const followingDetails = useMemo(() => {
+    if (!userId) return [];
+    return followConnections
+      .filter((connection) => connection.followerId === userId)
+      .map((connection) => ({
+        id: connection.followingId,
+        connectionId: connection.id,
+        name: connection.targetName && connection.targetName.trim() ? connection.targetName.trim() : "Community member",
+        createdAt: connection.createdAt,
+      }));
+  }, [followConnections, userId]);
+
+  const friendCircleIds = useMemo(() => {
+    if (!userId) return [];
+    const followerSet = new Set(followersIds);
+    return followingIds.filter((id) => followerSet.has(id));
+  }, [followersIds, followingIds, userId]);
+
+  const friendCircleDetails = useMemo(() => {
+    if (friendCircleIds.length === 0) return [];
+    const circleSet = new Set(friendCircleIds);
+    return followingDetails
+      .filter((detail) => circleSet.has(detail.id))
+      .map((detail) => ({ ...detail, isMutual: true }));
+  }, [friendCircleIds, followingDetails]);
+
+  const friendActivities = useMemo(() => {
+    if (friendCircleIds.length === 0) return [];
+    return activities.filter((activity) =>
+      activity.hostId && friendCircleIds.includes(activity.hostId)
+    );
+  }, [activities, friendCircleIds]);
+
 
   const userProfile = useMemo(() => {
     if (!userId) {
@@ -877,6 +951,38 @@ export function AppDataProvider({ children }) {
     }
   }, [userId]);
 
+  const fetchFollowConnections = useCallback(async () => {
+    if (!userId) {
+      setFollowConnections([]);
+      writeCollectionCache(FOLLOWS_CACHE_KEY, []);
+      return;
+    }
+    try {
+      if (!supabase) {
+        const seeded = followConnections.length > 0
+          ? followConnections
+          : INITIAL_FOLLOWS.map(normaliseFollow).filter(Boolean);
+        const filtered = seeded.filter((connection) =>
+          connection.followerId === userId || connection.followingId === userId
+        );
+        setFollowConnections(filtered);
+        writeCollectionCache(FOLLOWS_CACHE_KEY, filtered);
+        return;
+      }
+      const { data, error } = await supabase
+        .from(TABLES.userFollows)
+        .select("*")
+        .or(`follower_id.eq.${userId},following_id.eq.${userId}`);
+      if (error) throw error;
+      const mapped = (data ?? []).map(normaliseFollow).filter(Boolean);
+      setFollowConnections(mapped);
+      writeCollectionCache(FOLLOWS_CACHE_KEY, mapped);
+    } catch (error) {
+      console.error("Failed to fetch follow connections", error);
+    }
+  }, [followConnections, supabase, userId]);
+
+
   useEffect(() => {
     fetchActivities();
     fetchGroups();
@@ -890,11 +996,13 @@ export function AppDataProvider({ children }) {
     fetchActivityConnections();
     fetchGroupMemberships();
     fetchIdeaEndorsements();
+    fetchFollowConnections();
   }, [
     authLoading,
     fetchActivityConnections,
     fetchGroupMemberships,
     fetchIdeaEndorsements,
+    fetchFollowConnections,
     fetchNotifications,
     fetchProfile,
   ]);
@@ -1387,6 +1495,104 @@ export function AppDataProvider({ children }) {
     },
     [savedActivities, userId]
   );
+
+  const followUser = useCallback(
+    async (targetId, info = {}) => {
+      if (!userId) throw new Error("Please sign in first.");
+      if (!targetId || targetId === userId) return;
+      const providedName =
+        typeof info.displayName === "string" && info.displayName.trim().length > 0
+          ? info.displayName.trim()
+          : typeof info.name === "string" && info.name.trim().length > 0
+          ? info.name.trim()
+          : "";
+      setFollowConnections((previous) => {
+        const exists = previous.some(
+          (connection) => connection.followerId === userId && connection.followingId === targetId
+        );
+        if (exists) return previous;
+        const entry = normaliseFollow({
+          id: generateId(),
+          follower_id: userId,
+          following_id: targetId,
+          target_name: providedName,
+          created_at: new Date().toISOString(),
+        });
+        const next = [...previous, entry];
+        writeCollectionCache(FOLLOWS_CACHE_KEY, next);
+        return next;
+      });
+      if (supabase) {
+        try {
+          await supabase.from(TABLES.userFollows).upsert({
+            follower_id: userId,
+            following_id: targetId,
+            target_name: providedName,
+            created_at: new Date().toISOString(),
+          });
+        } catch (error) {
+          console.error("Failed to follow user", error);
+        }
+      }
+    },
+    [supabase, userId]
+  );
+
+  const unfollowUser = useCallback(
+    async (targetId) => {
+      if (!userId) throw new Error("Please sign in first.");
+      if (!targetId) return;
+      let removed = false;
+      setFollowConnections((previous) => {
+        const next = previous.filter(
+          (connection) => !(connection.followerId === userId && connection.followingId === targetId)
+        );
+        removed = next.length !== previous.length;
+        if (removed) {
+          writeCollectionCache(FOLLOWS_CACHE_KEY, next);
+        }
+        return next;
+      });
+      if (removed && supabase) {
+        try {
+          await supabase
+            .from(TABLES.userFollows)
+            .delete()
+            .eq("follower_id", userId)
+            .eq("following_id", targetId);
+        } catch (error) {
+          console.error("Failed to unfollow user", error);
+        }
+      }
+    },
+    [supabase, userId]
+  );
+
+  const shareActivityWithFriends = useCallback(
+    async (activityId, friendIds = [], note = "") => {
+      if (!userId) throw new Error("Please sign in first.");
+      const uniqueFriendIds = Array.from(new Set((friendIds || []).filter(Boolean)));
+      const activity = activities.find((item) => item.id === activityId) ?? null;
+      const friendCount = uniqueFriendIds.length;
+      const activityTitle = activity?.title ?? "this activity";
+      const trimmedNote = typeof note === "string" ? note.trim() : "";
+      const messageParts = [];
+      if (friendCount > 0) {
+        messageParts.push(
+          `You saved ${activityTitle} with ${friendCount} friend${friendCount === 1 ? "" : "s"} in mind.`
+        );
+      } else {
+        messageParts.push(`You bookmarked ${activityTitle} for future coordination.`);
+      }
+      if (trimmedNote) {
+        messageParts.push(`Personal note: "${trimmedNote}"`);
+      }
+      messageParts.push("Friend notifications will roll out soon—sit tight.");
+      await appendNotification("Friend circle saved", messageParts.join(" "));
+    },
+    [activities, appendNotification, userId]
+  );
+
 
   const submitIdeaPrompt = useCallback(
     async (prompt) => {
@@ -2212,11 +2418,21 @@ export function AppDataProvider({ children }) {
       waitlistedActivities,
       savedActivities,
       joinedGroups,
+      followConnections,
+      followingIds,
+      followersIds,
+      followingDetails,
+      friendCircleIds,
+      friendCircleDetails,
+      friendActivities,
       ideaEndorsements,
       createActivity,
       proposeBrainstormIdea,
       joinActivity,
       toggleSaveActivity,
+      followUser,
+      unfollowUser,
+      shareActivityWithFriends,
       submitIdeaPrompt,
       endorseIdea,
       createGroup,
@@ -2246,6 +2462,13 @@ export function AppDataProvider({ children }) {
     [
       activities,
       appendNotification,
+      followConnections,
+      followingIds,
+      followersIds,
+      followingDetails,
+      friendCircleIds,
+      friendCircleDetails,
+      friendActivities,
       categories,
       createActivity,
       createGroup,
@@ -2281,6 +2504,9 @@ export function AppDataProvider({ children }) {
       submitIdeaPrompt,
       subscribeToGroupBulletins,
       toggleSaveActivity,
+      followUser,
+      unfollowUser,
+      shareActivityWithFriends,
       trendingActivities,
       user,
       userId,

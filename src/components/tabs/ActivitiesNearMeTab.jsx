@@ -1,10 +1,17 @@
 "use client";
 
+
+  useEffect(() => {
+    setFriendShareFeedback("");
+    setFriendShareError("");
+  }, [selectedActivityId]);
+
 import Image from "next/image";
 import dynamic from "next/dynamic";
 import { useMemo, useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useAppData } from "../../context/AppDataContext";
+import FriendInviteModal from "../FriendInviteModal";
 
 const distanceOptions = [
   { label: "Any distance", value: "Any" },
@@ -253,6 +260,13 @@ export default function ActivitiesNearMeTab() {
     savedActivities,
     joinActivity,
     toggleSaveActivity,
+    followUser,
+    unfollowUser,
+    followingDetails,
+    friendCircleDetails,
+    friendActivities,
+    shareActivityWithFriends,
+    currentUserId,
     loadingActivities,
   } = useAppData();
   const [isMobile, setIsMobile] = useState(false);
@@ -294,6 +308,11 @@ export default function ActivitiesNearMeTab() {
   const [viewMode, setViewMode] = useState("list");
   const [selectedActivityId, setSelectedActivityId] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
+  const [showFriendModal, setShowFriendModal] = useState(false);
+  const [friendShareFeedback, setFriendShareFeedback] = useState("");
+  const [friendShareError, setFriendShareError] = useState("");
+  const friendCircle = friendCircleDetails ?? [];
+  const friendHostedActivities = friendActivities ?? [];
 
   const nearbyActivities = useMemo(() => {
     const base = activities.filter((activity) => activity.isNearby);
@@ -365,6 +384,12 @@ export default function ActivitiesNearMeTab() {
     return activitiesWithCoordinates.find((activity) => activity.id === selectedActivityId) ?? null;
   }, [activitiesWithCoordinates, selectedActivityId]);
 
+  useEffect(() => {
+    setFriendShareFeedback("");
+    setFriendShareError("");
+  }, [selectedActivityId]);
+
+
   const selectedActivityMeta = useMemo(() => {
     if (!selectedActivity) return null;
     const eventDate = new Date(selectedActivity.dateTime);
@@ -404,6 +429,13 @@ export default function ActivitiesNearMeTab() {
   const joinedSelected = selectedActivity ? joinedActivities.includes(selectedActivity.id) : false;
   const waitlistedSelected = selectedActivity ? waitlistedActivities.includes(selectedActivity.id) : false;
   const savedSelected = selectedActivity ? savedActivities.includes(selectedActivity.id) : false;
+  const selectedHostId = selectedActivity?.hostId ?? null;
+  const hostDisplayName = selectedActivityMeta?.host ?? selectedActivity?.host ?? "Community Host";
+  const isSelfHost = selectedHostId && currentUserId && selectedHostId === currentUserId;
+  const hostFollowRecord = selectedHostId
+    ? followingDetails.find((connection) => connection.id === selectedHostId)
+    : null;
+  const isFollowingHost = Boolean(hostFollowRecord);
 
   const handleSelectActivity = useCallback((activityId) => {
     setSelectedActivityId(activityId ?? null);
@@ -424,6 +456,26 @@ export default function ActivitiesNearMeTab() {
       });
     }
   }, []);
+
+
+  const handleFriendShare = useCallback(
+    async (selectedIds = [], note = "") => {
+      if (!selectedActivity) {
+        setFriendShareError("Select an activity first to coordinate with friends.");
+        return;
+      }
+      try {
+        await shareActivityWithFriends(selectedActivity.id, selectedIds, note);
+        setFriendShareError("");
+        setFriendShareFeedback("Saved for your friend circle. We will handle the nudges soon.");
+        setShowFriendModal(false);
+      } catch (error) {
+        console.error("Failed to share activity with friends", error);
+        setFriendShareError("We could not save that invite. Please try again.");
+      }
+    },
+    [selectedActivity, shareActivityWithFriends]
+  );
 
   const isMapView = viewMode === "map";
   const isListView = !isMapView;
@@ -589,6 +641,58 @@ export default function ActivitiesNearMeTab() {
         )}
       </div>
 
+      {friendCircle.length > 0 && friendHostedActivities.length > 0 ? (
+        <div className="rounded-3xl border border-emerald-100 bg-emerald-50/40 p-6 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-lg font-semibold text-emerald-700">Friends are hosting soon</h3>
+              <p className="text-sm text-emerald-600">
+                Keep an eye on activities led by people you follow and coordinate when you are ready.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setFriendShareError("");
+                setFriendShareFeedback("");
+                if (selectedActivity) {
+                  setShowFriendModal(true);
+                } else if (friendHostedActivities[0]) {
+                  setViewMode("map");
+                  setSelectedActivityId(friendHostedActivities[0].id);
+                  setShowFriendModal(true);
+                }
+              }}
+              className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-semibold text-emerald-600 transition hover:border-emerald-300 hover:text-emerald-700"
+            >
+              Communicate with friends
+            </button>
+          </div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {friendHostedActivities.slice(0, 3).map((activity) => (
+              <div key={activity.id} className="rounded-2xl border border-emerald-100 bg-white/80 px-4 py-3 text-sm shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-500">Friend host</p>
+                <p className="mt-1 font-medium text-gray-900">{activity.title}</p>
+                <p className="text-xs text-gray-500">Hosted by {activity.host ?? "Community Host"}</p>
+                <div className="mt-3 flex items-center justify-between text-xs text-gray-500">
+                  <span>{new Date(activity.dateTime).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode("map");
+                      setSelectedActivityId(activity.id);
+                    }}
+                    className="font-semibold text-emerald-600 hover:text-emerald-700"
+                  >
+                    View on map
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {isMapView ? (
         <div className="space-y-6">
           {activitiesWithCoordinates.length > 0 ? (
@@ -642,11 +746,28 @@ export default function ActivitiesNearMeTab() {
                           <span>{selectedDistanceLabel}</span>
                         </div>
                       ) : null}
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 px-3 py-1 text-xs font-semibold text-indigo-600">
                           Host
                         </span>
-                        <span>{selectedActivityMeta?.host}</span>
+                        <span className="font-medium text-slate-700">{hostDisplayName}</span>
+                        {selectedHostId && !isSelfHost ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              isFollowingHost
+                                ? unfollowUser(selectedHostId)
+                                : followUser(selectedHostId, { displayName: hostDisplayName })
+                            }
+                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                              isFollowingHost
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+                                : "border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                            }`}
+                          >
+                            {isFollowingHost ? "Following" : "Follow host"}
+                          </button>
+                        ) : null}
                       </div>
                     </div>
                     <div className="mt-auto flex flex-wrap items-center gap-3">
@@ -678,6 +799,29 @@ export default function ActivitiesNearMeTab() {
                         <HeartIcon filled={savedSelected} className="h-4 w-4" />
                       </button>
                     </div>
+                    {friendShareFeedback ? (
+                      <p className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-2xl px-3 py-2">
+                        {friendShareFeedback}
+                      </p>
+                    ) : null}
+                    {friendShareError ? (
+                      <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-2xl px-3 py-2">
+                        {friendShareError}
+                      </p>
+                    ) : null}
+                    {friendCircle.length > 0 && selectedActivity ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFriendShareError("");
+                          setFriendShareFeedback("");
+                          setShowFriendModal(true);
+                        }}
+                        className="rounded-full border border-indigo-200 px-4 py-2 text-sm font-semibold text-indigo-600 transition hover:border-indigo-300 hover:text-pink-500"
+                      >
+                        Communicate with friends
+                      </button>
+                    ) : null}
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
                       {selectedActivityMeta?.attendees ?? 0} people already joined
                     </p>
@@ -728,6 +872,11 @@ export default function ActivitiesNearMeTab() {
               Number.isFinite(distanceValue) && distanceValue > 0
                 ? `${distanceValue >= 10 ? distanceValue.toFixed(0) : distanceValue.toFixed(1)} km away`
                 : "Within city";
+            const hostId = activity.hostId ?? null;
+            const cardHostName = activity.host ?? "Community Host";
+            const hostIsFriend = hostId ? friendCircle.some((friend) => friend.id === hostId) : false;
+            const hostIsFollowed = hostId ? followingDetails.some((detail) => detail.id === hostId) : false;
+            const hostIsSelf = hostId && currentUserId && hostId === currentUserId;
             return (
               <motion.div
                 key={activity.id}
@@ -758,11 +907,18 @@ export default function ActivitiesNearMeTab() {
                     </p>
                     <h3 className="text-xl font-bold text-gray-900 mt-1">{activity.title}</h3>
                   </div>
-                  {activity.featured && (
-                    <span className="text-xs font-semibold text-pink-500 bg-pink-50 px-3 py-1 rounded-full">
-                      Featured
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {hostIsFriend ? (
+                      <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
+                        Friend host
+                      </span>
+                    ) : null}
+                    {activity.featured ? (
+                      <span className="text-xs font-semibold text-pink-500 bg-pink-50 px-3 py-1 rounded-full">
+                        Featured
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
 
                 <p className="text-gray-600 text-sm leading-relaxed">{activity.description}</p>
@@ -782,8 +938,27 @@ export default function ActivitiesNearMeTab() {
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span>Hosted by {activity.host ?? "Community Host"}</span>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-gray-500">
+                  <div className="flex items-center gap-2">
+                    <span>Hosted by {cardHostName}</span>
+                    {hostId && !hostIsSelf ? (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          hostIsFollowed
+                            ? unfollowUser(hostId)
+                            : followUser(hostId, { displayName: cardHostName })
+                        }
+                        className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold transition ${
+                          hostIsFollowed
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-600"
+                            : "border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+                        }`}
+                      >
+                        {hostIsFollowed ? "Following" : "Follow"}
+                      </button>
+                    ) : null}
+                  </div>
                   <span>{activity.attendees ?? 0} joined</span>
                 </div>
 
@@ -830,6 +1005,13 @@ export default function ActivitiesNearMeTab() {
           )}
         </div>
       )}
+      <FriendInviteModal
+        open={showFriendModal}
+        onClose={() => setShowFriendModal(false)}
+        onSubmit={handleFriendShare}
+        friends={friendCircle}
+        activity={selectedActivity}
+      />
     </section>
   );
 }

@@ -283,6 +283,8 @@ export const INITIAL_IDEAS = [
   },
 ];
 
+export const INITIAL_FOLLOWS = [];
+
 export const INITIAL_NOTIFICATIONS = [];
 
 export function buildDefaultProfile(user) {
