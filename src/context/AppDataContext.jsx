@@ -389,6 +389,38 @@ function normaliseFollow(row) {
   };
 }
 
+function normaliseFollowCollection(value) {
+  if (!Array.isArray(value)) return [];
+  const seen = new Map();
+
+  for (const entry of value) {
+    const normalised = normaliseFollow(entry);
+    if (!normalised) continue;
+    const key = `${normalised.followerId}_${normalised.followingId}`;
+
+    const existing = seen.get(key);
+    if (existing) {
+      const existingTime = existing.createdAt ? new Date(existing.createdAt).getTime() : 0;
+      const candidateTime = normalised.createdAt ? new Date(normalised.createdAt).getTime() : 0;
+      if (candidateTime > existingTime) {
+        seen.set(key, normalised);
+      }
+      continue;
+    }
+
+    seen.set(key, normalised);
+  }
+
+  const result = Array.from(seen.values());
+  result.sort((a, b) => {
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return timeB - timeA;
+  });
+
+  return result;
+}
+
 function shouldDisplayIdea(idea) {
   return Boolean(idea) && idea.status !== "launched" && !idea.launchedActivityId;
 }
@@ -535,11 +567,9 @@ export function AppDataProvider({ children }) {
   const [groupMemberships, setGroupMemberships] = useState([]);
   const [groupMessages, setGroupMessages] = useState({});
   const [followConnections, setFollowConnections] = useState(() =>
-    readCollectionCache(FOLLOWS_CACHE_KEY, INITIAL_FOLLOWS.map(normaliseFollow).filter(Boolean))
+    normaliseFollowCollection(readCollectionCache(FOLLOWS_CACHE_KEY, INITIAL_FOLLOWS))
   );
-
   const [ideaEndorsements, setIdeaEndorsements] = useState([]);
-
   const [loadingActivities, setLoadingActivities] = useState(activities.length === 0);
   const [loadingGroups, setLoadingGroups] = useState(groups.length === 0);
   const [loadingIdeas, setLoadingIdeas] = useState(ideas.length === 0);
@@ -547,7 +577,9 @@ export function AppDataProvider({ children }) {
   const [profileLoading, setProfileLoading] = useState(false);
   const [isMutating, setIsMutating] = useState(false);
 
-  const profilesCacheRef = useRef(new Map());
+  useEffect(() => {
+    writeCollectionCache(FOLLOWS_CACHE_KEY, followConnections);
+  }, [followConnections]);
 
   const canUseIdsWithSupabase = useCallback(
     (...ids) => ids.every((id) => id == null || isValidUuid(id)),
@@ -976,33 +1008,34 @@ export function AppDataProvider({ children }) {
   const fetchFollowConnections = useCallback(async () => {
     if (!userId) {
       setFollowConnections([]);
-      writeCollectionCache(FOLLOWS_CACHE_KEY, []);
       return;
     }
     try {
       if (!supabase) {
-        const seeded = followConnections.length > 0
-          ? followConnections
-          : INITIAL_FOLLOWS.map(normaliseFollow).filter(Boolean);
-        const filtered = seeded.filter((connection) =>
-          connection.followerId === userId || connection.followingId === userId
+        const cached = readCollectionCache(FOLLOWS_CACHE_KEY, INITIAL_FOLLOWS);
+        const normalised = normaliseFollowCollection(cached);
+        const scoped = normalised.filter(
+          (connection) => connection.followerId === userId || connection.followingId === userId
         );
-        setFollowConnections(filtered);
-        writeCollectionCache(FOLLOWS_CACHE_KEY, filtered);
+        setFollowConnections(scoped);
         return;
       }
+
       const { data, error } = await supabase
         .from(TABLES.userFollows)
         .select("*")
         .or(`follower_id.eq.${userId},following_id.eq.${userId}`);
       if (error) throw error;
-      const mapped = (data ?? []).map(normaliseFollow).filter(Boolean);
-      setFollowConnections(mapped);
-      writeCollectionCache(FOLLOWS_CACHE_KEY, mapped);
+
+      const normalised = normaliseFollowCollection(data ?? []);
+      const scoped = normalised.filter(
+        (connection) => connection.followerId === userId || connection.followingId === userId
+      );
+      setFollowConnections(scoped);
     } catch (error) {
       console.error("Failed to fetch follow connections", error);
     }
-  }, [followConnections, supabase, userId]);
+  }, [supabase, userId]);
 
 
   useEffect(() => {
@@ -1521,69 +1554,105 @@ export function AppDataProvider({ children }) {
   const followUser = useCallback(
     async (targetId, info = {}) => {
       if (!userId) throw new Error("Please sign in first.");
-      if (!targetId || targetId === userId) return;
+      const cleanedTargetId = typeof targetId === "string" ? targetId.trim() : String(targetId ?? "").trim();
+      if (!cleanedTargetId || cleanedTargetId === userId) return;
+
       const providedName =
         typeof info.displayName === "string" && info.displayName.trim().length > 0
           ? info.displayName.trim()
           : typeof info.name === "string" && info.name.trim().length > 0
           ? info.name.trim()
           : "";
+
+      const optimistic = normaliseFollow({
+        follower_id: userId,
+        following_id: cleanedTargetId,
+        target_name: providedName,
+        follower_name: userProfile?.name ?? displayName ?? "",
+        created_at: new Date().toISOString(),
+      });
+
+      if (!optimistic) return;
+
+      let applied = false;
       setFollowConnections((previous) => {
         const exists = previous.some(
-          (connection) => connection.followerId === userId && connection.followingId === targetId
+          (connection) =>
+            connection.followerId === optimistic.followerId &&
+            connection.followingId === optimistic.followingId
         );
         if (exists) return previous;
-        const entry = normaliseFollow({
-          id: generateId(),
-          follower_id: userId,
-          following_id: targetId,
-          target_name: providedName,
-          created_at: new Date().toISOString(),
-        });
-        const next = [...previous, entry];
-        writeCollectionCache(FOLLOWS_CACHE_KEY, next);
-        return next;
+        applied = true;
+        return normaliseFollowCollection([...previous, optimistic]);
       });
+
+      if (!applied) return optimistic;
+
       if (supabase) {
         try {
           await supabase.from(TABLES.userFollows).upsert({
-            follower_id: userId,
-            following_id: targetId,
-            target_name: providedName,
-            created_at: new Date().toISOString(),
+            follower_id: optimistic.followerId,
+            following_id: optimistic.followingId,
+            target_name: optimistic.targetName,
+            follower_name: optimistic.followerName,
+            created_at: optimistic.createdAt,
           });
         } catch (error) {
           console.error("Failed to follow user", error);
+          setFollowConnections((previous) =>
+            previous.filter(
+              (connection) =>
+                !(
+                  connection.followerId === optimistic.followerId &&
+                  connection.followingId === optimistic.followingId
+                )
+            )
+          );
+          throw error;
         }
       }
+
+      return optimistic;
     },
-    [supabase, userId]
+    [displayName, supabase, userId, userProfile?.name]
   );
 
   const unfollowUser = useCallback(
     async (targetId) => {
       if (!userId) throw new Error("Please sign in first.");
-      if (!targetId) return;
-      let removed = false;
+      const cleanedTargetId = typeof targetId === "string" ? targetId.trim() : String(targetId ?? "").trim();
+      if (!cleanedTargetId) return;
+
+      let removedConnection = null;
       setFollowConnections((previous) => {
-        const next = previous.filter(
-          (connection) => !(connection.followerId === userId && connection.followingId === targetId)
-        );
-        removed = next.length !== previous.length;
-        if (removed) {
-          writeCollectionCache(FOLLOWS_CACHE_KEY, next);
+        const next = [];
+        for (const connection of previous) {
+          const match =
+            connection.followerId === userId && connection.followingId === cleanedTargetId;
+          if (match && !removedConnection) {
+            removedConnection = connection;
+            continue;
+          }
+          next.push(connection);
         }
         return next;
       });
-      if (removed && supabase) {
+
+      if (!removedConnection) return;
+
+      if (supabase) {
         try {
           await supabase
             .from(TABLES.userFollows)
             .delete()
-            .eq("follower_id", userId)
-            .eq("following_id", targetId);
+            .eq("follower_id", removedConnection.followerId)
+            .eq("following_id", removedConnection.followingId);
         } catch (error) {
           console.error("Failed to unfollow user", error);
+          setFollowConnections((previous) =>
+            normaliseFollowCollection([...previous, removedConnection])
+          );
+          throw error;
         }
       }
     },
@@ -1593,26 +1662,50 @@ export function AppDataProvider({ children }) {
   const shareActivityWithFriends = useCallback(
     async (activityId, friendIds = [], note = "") => {
       if (!userId) throw new Error("Please sign in first.");
-      const uniqueFriendIds = Array.from(new Set((friendIds || []).filter(Boolean)));
-      const activity = activities.find((item) => item.id === activityId) ?? null;
-      const friendCount = uniqueFriendIds.length;
+      const cleanedActivityId = typeof activityId === "string" ? activityId.trim() : String(activityId ?? "").trim();
+      if (!cleanedActivityId) throw new Error("Select an activity to share.");
+
+      const candidateIds = Array.from(
+        new Set(
+          (Array.isArray(friendIds) ? friendIds : [])
+            .map((value) => (value == null ? "" : String(value).trim()))
+            .filter(Boolean)
+        )
+      );
+
+      const allowed = new Set(friendCircleIds);
+      const validIds = candidateIds.filter((id) => allowed.has(id));
+      const skippedCount = candidateIds.length - validIds.length;
+
+      const activity = activities.find((item) => item.id === cleanedActivityId) ?? null;
       const activityTitle = activity?.title ?? "this activity";
       const trimmedNote = typeof note === "string" ? note.trim() : "";
+
       const messageParts = [];
-      if (friendCount > 0) {
+      if (validIds.length > 0) {
         messageParts.push(
-          `You saved ${activityTitle} with ${friendCount} friend${friendCount === 1 ? "" : "s"} in mind.`
+          `You saved ${activityTitle} with ${validIds.length} friend${validIds.length === 1 ? "" : "s"} in mind.`
         );
       } else {
         messageParts.push(`You bookmarked ${activityTitle} for future coordination.`);
       }
+
       if (trimmedNote) {
         messageParts.push(`Personal note: "${trimmedNote}"`);
       }
-      messageParts.push("Friend notifications will roll out soon—sit tight.");
+
+      if (skippedCount > 0) {
+        messageParts.push(
+          `${skippedCount} friend${skippedCount === 1 ? "" : "s"} ${skippedCount === 1 ? "is" : "are"} not in your mutual circle yet.`
+        );
+      }
+
+      messageParts.push("Friend alerts will roll out soon � sit tight.");
+
       await appendNotification("Friend circle saved", messageParts.join(" "));
+      return { invited: validIds.length, skipped: skippedCount };
     },
-    [activities, appendNotification, userId]
+    [activities, appendNotification, friendCircleIds, userId]
   );
 
 
@@ -2549,6 +2642,12 @@ export const useAppData = () => {
   }
   return context;
 };
+
+
+
+
+
+
 
 
 

@@ -1,10 +1,5 @@
-"use client";
+﻿"use client";
 
-
-  useEffect(() => {
-    setFriendShareFeedback("");
-    setFriendShareError("");
-  }, [selectedActivityId]);
 
 import Image from "next/image";
 import dynamic from "next/dynamic";
@@ -311,8 +306,27 @@ export default function ActivitiesNearMeTab() {
   const [showFriendModal, setShowFriendModal] = useState(false);
   const [friendShareFeedback, setFriendShareFeedback] = useState("");
   const [friendShareError, setFriendShareError] = useState("");
-  const friendCircle = friendCircleDetails ?? [];
-  const friendHostedActivities = friendActivities ?? [];
+  const [friendSharePending, setFriendSharePending] = useState(false);
+  const friendCircle = useMemo(
+    () => (Array.isArray(friendCircleDetails) ? friendCircleDetails : []),
+    [friendCircleDetails]
+  );
+  const friendHostedActivities = useMemo(() => {
+    if (!Array.isArray(friendActivities)) return [];
+    const seen = new Set();
+    return friendActivities
+      .filter((activity) => {
+        if (!activity || !activity.id) return false;
+        if (seen.has(activity.id)) return false;
+        seen.add(activity.id);
+        return true;
+      })
+      .sort((a, b) => {
+        const timeA = a?.dateTime ? new Date(a.dateTime).getTime() : 0;
+        const timeB = b?.dateTime ? new Date(b.dateTime).getTime() : 0;
+        return timeA - timeB;
+      });
+  }, [friendActivities]);
 
   const nearbyActivities = useMemo(() => {
     const base = activities.filter((activity) => activity.isNearby);
@@ -387,6 +401,7 @@ export default function ActivitiesNearMeTab() {
   useEffect(() => {
     setFriendShareFeedback("");
     setFriendShareError("");
+    setFriendSharePending(false);
   }, [selectedActivityId]);
 
 
@@ -464,14 +479,30 @@ export default function ActivitiesNearMeTab() {
         setFriendShareError("Select an activity first to coordinate with friends.");
         return;
       }
+      setFriendSharePending(true);
       try {
-        await shareActivityWithFriends(selectedActivity.id, selectedIds, note);
+        const result = await shareActivityWithFriends(selectedActivity.id, selectedIds, note);
+        const invited = result?.invited ?? (Array.isArray(selectedIds) ? selectedIds.length : 0);
+        const skipped = result?.skipped ?? 0;
+        const messages = [];
+        if (invited > 0) {
+          messages.push(`Saved for ${invited} friend${invited === 1 ? "" : "s"}.`);
+        } else {
+          messages.push("Saved for later coordination.");
+        }
+        if (skipped > 0) {
+          messages.push(
+            `${skipped} friend${skipped === 1 ? "" : "s"} still need a mutual follow before we can nudge them.`
+          );
+        }
+        setFriendShareFeedback(messages.join(" "));
         setFriendShareError("");
-        setFriendShareFeedback("Saved for your friend circle. We will handle the nudges soon.");
         setShowFriendModal(false);
       } catch (error) {
         console.error("Failed to share activity with friends", error);
         setFriendShareError("We could not save that invite. Please try again.");
+      } finally {
+        setFriendSharePending(false);
       }
     },
     [selectedActivity, shareActivityWithFriends]
@@ -1011,7 +1042,12 @@ export default function ActivitiesNearMeTab() {
         onSubmit={handleFriendShare}
         friends={friendCircle}
         activity={selectedActivity}
+        isSubmitting={friendSharePending}
       />
     </section>
   );
 }
+
+
+
+

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -14,40 +14,63 @@ function buildFriendLabel(friend) {
   return "Community member";
 }
 
-export default function FriendInviteModal({ open, onClose, onSubmit, friends = [], activity = null }) {
+function normaliseFriendId(value) {
+  if (value == null) return "";
+  if (typeof value === "string") return value.trim();
+  return String(value).trim();
+}
+
+export default function FriendInviteModal({
+  open,
+  onClose,
+  onSubmit,
+  friends = [],
+  activity = null,
+  isSubmitting = false,
+}) {
   const [selectedIds, setSelectedIds] = useState([]);
   const [note, setNote] = useState("");
 
   useEffect(() => {
-    if (open) {
-      const defaultSelection = friends.map((friend) => friend.id).filter(Boolean);
-      setSelectedIds(defaultSelection);
-      setNote("");
-    }
+    if (!open) return;
+    const defaultSelection = friends
+      .map((friend) => normaliseFriendId(friend?.id))
+      .filter((id) => id.length > 0);
+    setSelectedIds(defaultSelection);
+    setNote("");
   }, [friends, open]);
 
   const toggleFriend = (friendId) => {
-    if (!friendId) return;
+    const normalisedId = normaliseFriendId(friendId);
+    if (!normalisedId) return;
     setSelectedIds((previous) => {
-      if (previous.includes(friendId)) {
-        return previous.filter((id) => id !== friendId);
+      if (previous.includes(normalisedId)) {
+        return previous.filter((id) => id !== normalisedId);
       }
-      return [...previous, friendId];
+      return [...previous, normalisedId];
     });
   };
 
   const handleSubmit = (event) => {
     event.preventDefault();
+    if (isSubmitting) return;
     if (typeof onSubmit === "function") {
       onSubmit(selectedIds, note);
     }
   };
 
+  const friendOptions = friends
+    .map((friend) => {
+      const id = normaliseFriendId(friend?.id);
+      if (!id) return null;
+      return {
+        id,
+        name: buildFriendLabel(friend),
+      };
+    })
+    .filter(Boolean);
+
   const selectedCount = selectedIds.length;
-  const friendOptions = friends.map((friend) => ({
-    id: friend.id,
-    name: buildFriendLabel(friend),
-  }));
   const activityTitle = activity?.title ?? "this activity";
 
   return (
@@ -91,7 +114,11 @@ export default function FriendInviteModal({ open, onClose, onSubmit, friends = [
                       return (
                         <label
                           key={friend.id}
-                          className={lex items-center justify-between gap-3 rounded-2xl border px-4 py-2 text-sm transition }
+                          className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-2 text-sm transition ${
+                            checked
+                              ? "border-indigo-300 bg-indigo-50 text-indigo-700"
+                              : "border-gray-200 bg-white text-gray-600 hover:border-indigo-200"
+                          }`}
                         >
                           <span className="font-medium">{friend.name}</span>
                           <input
@@ -138,12 +165,22 @@ export default function FriendInviteModal({ open, onClose, onSubmit, friends = [
                   </button>
                   <motion.button
                     type="submit"
-                    whileHover={{ scale: friendOptions.length === 0 ? 1 : 1.03 }}
-                    whileTap={{ scale: friendOptions.length === 0 ? 1 : 0.97 }}
-                    disabled={friendOptions.length === 0 || selectedCount === 0}
-                    className={ounded-full px-4 py-2 text-sm font-semibold transition }
+                    whileHover={{
+                      scale:
+                        friendOptions.length === 0 || selectedCount === 0 || isSubmitting ? 1 : 1.03,
+                    }}
+                    whileTap={{
+                      scale:
+                        friendOptions.length === 0 || selectedCount === 0 || isSubmitting ? 1 : 0.97,
+                    }}
+                    disabled={friendOptions.length === 0 || selectedCount === 0 || isSubmitting}
+                    className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                      friendOptions.length === 0 || selectedCount === 0 || isSubmitting
+                        ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                        : "bg-gradient-to-r from-indigo-600 to-pink-500 text-white shadow-lg hover:shadow-xl"
+                    }`}
                   >
-                    Save for later
+                    {isSubmitting ? "Saving..." : "Save for later"}
                   </motion.button>
                 </div>
               </div>
