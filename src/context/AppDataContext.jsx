@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   createContext,
@@ -18,6 +18,7 @@ import {
   INITIAL_ACTIVITIES,
   INITIAL_GROUPS,
   INITIAL_IDEAS,
+  INITIAL_FOLLOWS,
   INITIAL_NOTIFICATIONS,
   SEED_OWNER,
   buildDefaultProfile,
@@ -39,14 +40,16 @@ const TABLES = {
   activityJoins: "user_activity_join",
   activitySaves: "user_activity_save",
   groupMembers: "group_members",
-  ideaEndorsements: "idea_endorse",`n  userFollows: "user_follows",
+  ideaEndorsements: "idea_endorse",
+  userFollows: "user_follows",
   groupBulletins: "group_bulletins",
   groupMessages: "group_messages",
 };
 
 const ACTIVITIES_CACHE_KEY = "wizfriends.cache.activities";
 const GROUPS_CACHE_KEY = "wizfriends.cache.groups";
-const IDEAS_CACHE_KEY = "wizfriends.cache.ideas";`nconst FOLLOWS_CACHE_KEY = "wizfriends.cache.follows";
+const IDEAS_CACHE_KEY = "wizfriends.cache.ideas";
+const FOLLOWS_CACHE_KEY = "wizfriends.cache.follows";
 
 function generateId() {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
@@ -353,16 +356,35 @@ function normaliseFollow(row) {
   const followerId = row.followerId ?? row.follower_id ?? row.sourceId ?? row.source_id ?? null;
   const followingId = row.followingId ?? row.following_id ?? row.targetId ?? row.target_id ?? null;
   if (!followerId || !followingId) return null;
-  const targetNameCandidates = [row.targetName, row.target_name, row.followingName, row.following_name, row.displayName, row.display_name];
-  const followerNameCandidates = [row.followerName, row.follower_name, row.sourceName, row.source_name];
-  const targetName = targetNameCandidates.find((value) => typeof value === "string" && value.trim().length > 0);
-  const followerName = followerNameCandidates.find((value) => typeof value === "string" && value.trim().length > 0);
+
+  const cleanedFollowerId = String(followerId).trim();
+  const cleanedFollowingId = String(followingId).trim();
+
+  if (!cleanedFollowerId || !cleanedFollowingId || cleanedFollowerId === cleanedFollowingId) {
+    return null;
+  }
+
+  const targetName =
+    [
+      row.targetName,
+      row.target_name,
+      row.followingName,
+      row.following_name,
+      row.displayName,
+      row.display_name,
+    ].find((value) => typeof value === "string" && value.trim().length > 0)?.trim() ?? "";
+
+  const followerName =
+    [row.followerName, row.follower_name, row.sourceName, row.source_name].find(
+      (value) => typeof value === "string" && value.trim().length > 0
+    )?.trim() ?? "";
+
   return {
-    id: row.id ?? `${followerId}_${followingId}`,
-    followerId,
-    followingId,
-    targetName: targetName ? targetName.trim() : "",
-    followerName: followerName ? followerName.trim() : "",
+    id: row.id ?? cleanedFollowerId + "_" + cleanedFollowingId,
+    followerId: cleanedFollowerId,
+    followingId: cleanedFollowingId,
+    targetName,
+    followerName,
     createdAt: coerceIso(row.created_at ?? row.createdAt) ?? new Date().toISOString(),
   };
 }
@@ -1587,7 +1609,7 @@ export function AppDataProvider({ children }) {
       if (trimmedNote) {
         messageParts.push(`Personal note: "${trimmedNote}"`);
       }
-      messageParts.push("Friend notifications will roll out soon�sit tight.");
+      messageParts.push("Friend notifications will roll out soon—sit tight.");
       await appendNotification("Friend circle saved", messageParts.join(" "));
     },
     [activities, appendNotification, userId]
@@ -2527,6 +2549,12 @@ export const useAppData = () => {
   }
   return context;
 };
+
+
+
+
+
+
 
 
 
