@@ -373,6 +373,29 @@ function HomeContent() {
                 </p>
               </div>
               <form onSubmit={handleCreateActivitySubmit} className="space-y-4">
+                <input
+                  type="text"
+                  value={createForm.title}
+                  onChange={(event) => setCreateForm((prev) => ({ ...prev, title: event.target.value }))}
+                  placeholder="Event title (e.g. Sunrise trail run)"
+                  className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+                <select
+                  value={createForm.category}
+                  onChange={(event) => setCreateForm((prev) => ({ ...prev, category: event.target.value }))}
+                  className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                  required
+                >
+                  <option value="" disabled>
+                    Select a category
+                  </option>
+                  {CATEGORY_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <div className="relative">
                     <input
@@ -436,23 +459,6 @@ function HomeContent() {
                     onChange={(event) => setCreateForm((prev) => ({ ...prev, time: event.target.value }))}
                     className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                     required
-                  />
-                </div>
-                <div className="grid sm:grid-cols-2 gap-4">
-                  <input
-                    type="text"
-                    value={createForm.location}
-                    onChange={(event) => setCreateForm((prev) => ({ ...prev, location: event.target.value }))}
-                    placeholder="Location"
-                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    required
-                  />
-                  <input
-                    type="text"
-                    value={createForm.city}
-                    onChange={(event) => setCreateForm((prev) => ({ ...prev, city: event.target.value }))}
-                    placeholder="City"
-                    className="rounded-2xl border border-gray-200 px-4 py-3 text-sm text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
                 </div>
                 <div className="grid sm:grid-cols-3 gap-4">
