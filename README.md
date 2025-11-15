@@ -1,19 +1,17 @@
 # WizFriends - A Social Discovery Platform 🌍👫
 
-![WizFriends Logo](insert-your-logo-link-here)
-
 ---
 
 ## 🚀 About the Startup
 
-**WizFriends** is my first startup project aimed at creating a social discovery platform that connects people based on shared interests, activities, and local events. The app helps users:
+**WizFriends** is my **first startup** project aimed at creating a social discovery platform that connects people based on shared interests, activities, and local events. The app helps users:
 
 - Discover nearby activities based on GPS.
 - Create or join community groups and events.
 - Connect with like-minded people who share similar passions.
 - Participate in AI-generated activity ideas, endorsed by the community.
 
-The goal of **WizFriends** is to foster connections, reduce loneliness, and help people build meaningful relationships when they move to new places or live away from home. 
+The goal of **WizFriends** is to foster connections, reduce loneliness, and help people build meaningful relationships when they move to new places or live away from home.
 
 ---
 
