@@ -30,12 +30,12 @@ I have attached some pictures from my pitch presentation at SIT Torino, where I 
 
 ### 📸 Pitch Presentation at SIT Torino:
 
-
 <p align="center">
-  <img src="pitch%20day%20pictures/image1.jpg" width="400" alt="WizFriends Pitch Presentation 1"/>
-  <img src="pitch%20day%20pictures/image2.jpg" width="400" alt="WizFriends Pitch Presentation 2"/>
-  <img src="pitch%20day%20pictures/image3.jpg" width="400" alt="WizFriends Pitch Presentation 3"/>
+  <img src="https://github.com/BitwodedSeleshiDemissie/WizFriendsss/raw/main/pitch%20day%20pictures/image1.jpg" width="400" alt="WizFriends Pitch Presentation 1"/>
+  <img src="https://github.com/BitwodedSeleshiDemissie/WizFriendsss/raw/main/pitch%20day%20pictures/image2.jpg" width="400" alt="WizFriends Pitch Presentation 2"/>
+  <img src="https://github.com/BitwodedSeleshiDemissie/WizFriendsss/raw/main/pitch%20day%20pictures/image3.jpg" width="400" alt="WizFriends Pitch Presentation 3"/>
 </p>
+
 
 
 ---
