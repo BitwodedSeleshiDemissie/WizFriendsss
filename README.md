@@ -31,7 +31,7 @@ I have attached some pictures from my pitch presentation at SIT Torino, where I 
 ### 📸 Pitch Presentation at SIT Torino:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/BitwodedSeleshiDemissie/WizFriendsss/main/image1.jpg" width="400" alt="WizFriends Pitch Presentation 1"/>
+  <img src="https://raw.githubusercontent.com/BitwodedSeleshiDemissie/WizFriendsss/main/image11.jpg" width="400" alt="WizFriends Pitch Presentation 1"/>
   <img src="https://raw.githubusercontent.com/BitwodedSeleshiDemissie/WizFriendsss/main/image2.jpg" width="400" alt="WizFriends Pitch Presentation 2"/>
   <img src="https://raw.githubusercontent.com/BitwodedSeleshiDemissie/WizFriendsss/main/image3.jpg" width="400" alt="WizFriends Pitch Presentation 3"/>
 </p>
