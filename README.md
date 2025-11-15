@@ -1,83 +1,124 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# WizFriends - A Social Discovery Platform 🌍👫
 
-## Getting Started
+![WizFriends Logo](insert-your-logo-link-here)
 
-First, run the development server:
+---
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## 🚀 About the Startup
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**WizFriends** is my first startup project aimed at creating a social discovery platform that connects people based on shared interests, activities, and local events. The app helps users:
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+- Discover nearby activities based on GPS.
+- Create or join community groups and events.
+- Connect with like-minded people who share similar passions.
+- Participate in AI-generated activity ideas, endorsed by the community.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The goal of **WizFriends** is to foster connections, reduce loneliness, and help people build meaningful relationships when they move to new places or live away from home. 
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## 🎯 My Startup Journey: From Idea to SIT Torino Incubation
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+This is my **first startup**, and I'm incredibly excited to share that **WizFriends** has already been pitched to **Politecnico di Torino's startup incubation program (SIT Torino)**. I had the opportunity to present **WizFriends** to a panel of experts and mentors who support aspiring entrepreneurs in the university's innovation ecosystem.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### 🏆 Key Highlights:
+- **Startup Stage**: MVP (Minimum Viable Product) – early-stage product development and testing.
+- **Incubation Pitch**: Presented **WizFriends** to the SIT Torino team.
+- **Potential Impact**: Aimed at addressing the need for stronger community connections, especially for people relocating or living away from their hometowns.
 
-## Deploy on Vercel
+I have attached some pictures from my pitch presentation at SIT Torino, where I was able to showcase the vision for **WizFriends** and gather valuable feedback from professionals in the startup ecosystem. 
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### 📸 Pitch Presentation at SIT Torino:
 
-## Supabase Setup
+<p align="center">
+  <img src="insert-your-first-image-link-here" width="400" alt="WizFriends Pitch Presentation 1"/>
+  <img src="insert-your-second-image-link-here" width="400" alt="WizFriends Pitch Presentation 2"/>
+  <img src="insert-your-third-image-link-here" width="400" alt="WizFriends Pitch Presentation 3"/>
+</p>
 
-The app now uses [Supabase](https://supabase.com) for authentication and data storage. Seed data is still bundled for a zero-config preview, but production deployments should provision the following credentials in `.env.local` (or the Vercel dashboard):
+---
 
-```
-NEXT_PUBLIC_SUPABASE_URL=<your-project-url>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<your-anon-key>
-```
+## 🛠️ Technologies
 
-Optional (server-side automation, not currently required by the web app):
+- **Frontend**: React
+- **Backend**: Node.js, Express
+- **Database**: MongoDB
+- **AI**: Activity suggestion and AI-driven community idea generation
+- **Authentication**: JWT-based login system
+- **Hosting**: Render, Vercel, Heroku
 
-```
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-```
+---
 
-### Recommended Tables
+## 📊 MVP Features
 
-Create the tables below with matching column names (camelCase is fine—snake_case is used in the Supabase inserts). Each table should have `id uuid primary key default uuid_generate_v4()` unless noted.
+**WizFriends** offers several exciting features in its MVP phase:
 
-| Table | Purpose | Notable Columns |
-|-------|---------|-----------------|
-| `profiles` | User profile data for app views | `name`, `tagline`, `interests[]`, `current_city`, `photo_url` |
-| `activities` | Activities surfaced in the discover tab | `title`, `description`, `category`, `start_time`, `end_time`, `city`, `location_name`, `attendee_count`, `is_virtual`, `is_featured`, `tags[]` |
-| `user_activity_join` | Attendance records | `activity_id` (fk), `user_id` (fk), `status`, `joined_at` |
-| `user_activity_save` | Saved activities | `activity_id` (fk), `user_id` (fk), `saved_at` |
-| `ideas` | Brainstorm ideas | `prompt_text`, `ai_suggestion`, `category`, `tags[]`, `supporters[]`, `endorsement_count`, `endorsement_threshold`, `status` |
-| `idea_endorse` | Per-user endorsements | `idea_id` (fk), `user_id` (fk), `endorsed_at` |
-| `groups` | Community groups | `name`, `description`, `tags[]`, `owner_id`, `admin_ids[]`, `member_ids[]`, `members_count`, `is_private` |
-| `group_members` | Group membership / roles | `group_id` (fk), `user_id` (fk), `role`, `joined_at` |
-| `group_bulletins` | Notices & polls surfaced in the groups tab | `group_id`, `type`, `title`, `message`, `question`, `options jsonb`, `voters jsonb` |
-| `notifications` | In-app notifications for the user toast area | `recipient_id`, `title`, `message`, `read`, `created_at` |
+1. **Discover Activities Nearby**: Using GPS, users can find events around them.
+2. **Search & Explore**: Search for public events and activities based on keywords, location, or tags.
+3. **AI-Powered Ideas**: Submit prompts to the app, and AI generates potential activities for users to endorse and bring to life.
+4. **Create or Join Groups**: Persistent mini-communities or groups where users can meet regularly, discuss activities, and attend events.
+5. **Event Creation**: Users can create new events, invite others, and promote visibility.
 
-Enable Realtime for the tables you want to auto-refresh (e.g. `group_bulletins`) so the client subscription stays healthy.
+---
 
-### Local Development Tips
+## 🌱 Future Additions (Post-MVP)
 
-1. Copy `.env.local.example` (or create one) and populate the Supabase credentials.
-2. Run `npm run dev` and sign in with the Google provider configured in Supabase.
-3. With env vars unset, the app falls back to the bundled seed data for demo mode.
+- **In-app messaging**: For coordination and chatting with event participants.
+- **Mobile App**: A dedicated mobile version of **WizFriends** for both iOS and Android.
+- **QR-based attendance system**: For easy check-ins at events.
+- **Verified Host Profiles**: Ensuring event creators are legitimate and trustworthy.
+- **Business Partnerships**: Collaborations with local businesses to promote events.
 
-### Migration Notes
+---
 
-- Firebase dependencies, emulators, and Cloud Functions have been removed.
-- `AuthContext` now relies on `supabase-js` and syncs the Supabase session into an `authToken` cookie for the existing middleware guard.
-- `AppDataContext` reads/writes Supabase tables and gracefully degrades to the in-memory seed data when credentials are missing or queries fail.
-- When introducing new tables, mirror the camelCase fields used by the React components or extend the normalisers in `src/context/AppDataContext.jsx`.
+## 📈 Business Model & Monetization
+
+**WizFriends** aims to create a sustainable model through:
+
+- **Featured Listings**: Organizers can pay to feature their events prominently in the feed.
+- **Subscriptions for Organizers**: Premium features, analytics, and unlimited event posting.
+- **Partnerships with Local Businesses**: Sponsored events and promotions within local communities.
+
+---
+
+## 💡 Key User Personas
+
+**WizFriends** is designed to meet the needs of different user groups:
+
+- **Newcomers to a City**: People who have just moved to a new city and want to quickly connect with others and engage in local events.
+- **Event Organizers**: People who want to create and promote recurring or one-off events in their local community.
+- **Social Enthusiasts**: Users who are looking for opportunities to meet like-minded people based on shared activities and interests.
+
+---
+
+## 🧑‍💻 Contact & Contribution
+
+If you're interested in learning more about **WizFriends**, contributing to its development, or collaborating, feel free to reach out!
+
+- **Email**: [bitwoded@example.com](mailto:bitwoded@example.com)
+- **GitHub**: [@BitwodedSeleshiDemissie](https://github.com/BitwodedSeleshiDemissie)
+- **LinkedIn**: [@BitwodedSeleshiDemissie](https://www.linkedin.com/in/bitwodedseleshidemissie)
+
+---
+
+## 📜 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 🌍 Acknowledgements
+
+A huge thanks to **SIT Torino** and the team at **Politecnico di Torino** for their support and the opportunity to pitch **WizFriends**. Your feedback and encouragement have been invaluable in shaping the future of this project!
+
+---
+
+## 🎯 Future Plans
+
+The next steps for **WizFriends** involve refining the MVP, launching beta testing, and building a mobile version. The ultimate goal is to create a robust, scalable platform that will foster real-world connections in communities across the globe.
+
+---
+
+Thank you for checking out **WizFriends**! Let's build stronger communities, one connection at a time. 🙌
