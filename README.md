@@ -15,7 +15,7 @@ The goal of **WizFriends** is to foster connections, reduce loneliness, and help
 
 ---
 
-## 🎯 My Startup Journey: From Idea to SIT Torino Incubation
+## 🎯 My Startup Journey: From Idea to SITPolito Torino Incubation
 
 This is my **first startup**, and I'm incredibly excited to share that **WizFriends** has already been pitched to **Politecnico di Torino's startup incubation program (SIT Torino)**. I had the opportunity to present **WizFriends** to a panel of experts and mentors who support aspiring entrepreneurs in the university's innovation ecosystem.
 
